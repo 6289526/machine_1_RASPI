@@ -23,6 +23,11 @@ double kz = 3.1829046;  //実測値cmと、このパソコンの長さの調整�
 double kx = 2.06589452;
 double ky = kx;
 
+int count_frame = 0;
+float Servo_angle = 90;
+char Servo_angle_char[4] = "90";
+char valuex_i[200]; 
+
 int marker_set[4] = { 42, 18,
                       27, 43 };
 
@@ -53,7 +58,7 @@ int main(int argc, const char* argv[])
 	if (drone_image.data == NULL) return -1;
 
 	VideoCapture cap(0);  //カメラの映像の読み込み
-        cap.set(CV_CAP_PROP_FRAME_WIDTH, 1280);
+    cap.set(CV_CAP_PROP_FRAME_WIDTH, 1280);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
 
 	Mat mirror_image;  //表示画面の左右反転の用意
@@ -144,8 +149,9 @@ int main(int argc, const char* argv[])
 			average_center[1] = average_center[1] + all_marker_center[i][1];
 		}
 
-		average_center[0] = average_center[0] / z;
-		average_center[1] = average_center[1] / z;
+		average_center[0] = average_center[0] / z;  //x座標
+		average_center[1] = average_center[1] / z;  //y座標
+
 
 
 		cv::Mat rmatrix = (cv::Mat_<double>(3, 3)); //回転行列
@@ -189,7 +195,7 @@ int main(int argc, const char* argv[])
 				ave_angleY += angleY[i];
 				ave_angleZ += angleZ[i];
 
-				if (marker_ids[i] == 0)  //id=0のマーカーに
+				if (marker_ids[i] == 18)  //id=18のマーカーに
 				{
 					cv::Mat tmatrix = (cv::Mat_<double>(3, 1) << tvecs[i][0], tvecs[i][1], tvecs[i][2]);
 					cv::Mat distance = (cv::Mat_<double>(3, 1));
@@ -211,20 +217,6 @@ int main(int argc, const char* argv[])
 		}
 
 
-		
-
-		
-
-		
-		char valuex_i[256]; //次の行で使う一時的な変数
-		for (int i = 0; i < marker_ids.size(); i++)
-		{
-			if (marker_ids[i] == 18)  //id=18のマーカーに丸を付け
-			{
-				//circle(image, Point(marker_location[i][0], marker_location[i][1]), 10, Scalar(255, 0, 0), 3, 4);
-				//sprintf(valuex_i, "value=%f", marker_location[i][0]); //変数の値も含めた表示したい文字列をchar型変数に格納
-			}
-		}
 
 		float angle = 0;  //平均の角度
 		float t[6] = { 0, 0, 0, 0, 0, 0 };
@@ -258,7 +250,37 @@ int main(int argc, const char* argv[])
 			angle /= marker_ids.size();  //角度の平均を出す
 		}
 
-		sprintf(valuex_i, "value=%f", angle); //変数の値も含めた表示したい文字列をchar型変数に格納
+	    //サーボモーターを動かす角度を調べる
+		
+		char finish = '\n';
+        if(marker_ids.size() > 0) {
+			if(count_frame % 30 == 0){
+				
+                //Servo_angle += atan ( ((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360 );
+                Servo_angle += atan((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360;
+				
+
+				//Servo_angle++;
+				
+				if(Servo_angle >= 180){
+					Servo_angle -= 180;
+				}else if(Servo_angle <= 0){
+					Servo_angle += 180;
+				}
+				
+				//Servo_angleの角度にサーボを動かす
+				sprintf(Servo_angle_char, "%.0f", Servo_angle); 
+				//Servo_angle_char[3] = '\n';
+				Serial.write(&Servo_angle_char, 4);
+				Serial.write(&finish, 1);
+
+			}
+		}
+		count_frame++;
+
+
+        
+		sprintf(valuex_i, "value=%.0f", Servo_angle); //変数の値も含めた表示したい文字列をchar型変数に格納
 
 		//真ん中に円を描画
 		circle(image, Point(average_center[0], average_center[1]), 10, Scalar(255, 0, 0), 3, 4);
@@ -291,7 +313,7 @@ int main(int argc, const char* argv[])
 			flip(image, mirror_image, 1);
 		//}
 
-    	putText(/*mirror_*/image, valuex_i, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+    	putText(/*mirror_*/image, /*valuex_i*/Servo_angle_char, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
 
 		//ここからドローンの表示
 
@@ -334,6 +356,8 @@ int main(int argc, const char* argv[])
 
 	}
 	cv::waitKey(0);
+
+	serial close();
 
 	return 0;
 }
