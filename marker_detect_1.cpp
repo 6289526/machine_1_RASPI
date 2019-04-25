@@ -26,7 +26,7 @@ double ky = kx;
 int count_frame = 0;
 float Servo_angle = 90;
 char Servo_angle_char[4] = "90";
-char valuex_i[200]; 
+char value_Servo[200]; 
 
 int marker_set[4] = { 42, 18,
                       27, 43 };
@@ -98,6 +98,7 @@ int main(int argc, const char* argv[])
 		float all_marker_center[6][2] = {};
 		float average_center[2] = {};
 
+        //それぞれのマーカーの中心のスクリーン座標系を取得
 		for (int i = 0; i < marker_ids.size(); i++)
 		{
 			for (int j = 0; j < 4; j++)
@@ -116,7 +117,7 @@ int main(int argc, const char* argv[])
 		//average_center[1] = average_center[1] / marker_ids.size();
 
 
-		//4つのマーカーの中心の検出
+		//4つのマーカーのスクリーン座標系の中心の取得
 		int z = 0;
 		for (int i = 0; i < marker_ids.size(); i++) {
 			switch (marker_ids[i])
@@ -153,8 +154,10 @@ int main(int argc, const char* argv[])
 		average_center[1] = average_center[1] / z;  //y座標
 
 
+        //カメラからARマーカーまでの距離を求める
 
-		cv::Mat rmatrix = (cv::Mat_<double>(3, 3)); //回転行列
+        //回転行列を入れるための配列
+		cv::Mat rmatrix = (cv::Mat_<double>(3, 3));
 
 
 		double angleX[6] = { 0,0,0,0,0,0 };
@@ -167,8 +170,9 @@ int main(int argc, const char* argv[])
 		double distanceX = 0;
 		double distanceY = 0;
 		double distanceZ = 0;
+		double distanceR = 0;
 
-		//マーカーの3軸の検出
+		//マーカーの3軸の検出、ｘｙｚの取得
 		if (marker_ids.size() > 0)
 		{
 			cv::aruco::drawDetectedMarkers(image, marker_corners, marker_ids);
@@ -177,7 +181,8 @@ int main(int argc, const char* argv[])
 			for (int i = 0; i < marker_ids.size(); i++)
 			{
 				cv::aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 0.1);
-
+				
+				//3*1行列から3*3行列に戻す
 				Rodrigues(rvecs[i], rmatrix);
 
 				angleX[i] = atan2(rmatrix.at<double>(2, 1), rmatrix.at<double>(2, 2)) * 360 / (2 * 3.14);
@@ -195,20 +200,26 @@ int main(int argc, const char* argv[])
 				ave_angleY += angleY[i];
 				ave_angleZ += angleZ[i];
 
-				if (marker_ids[i] == 18)  //id=18のマーカーに
-				{
+				//if (marker_ids[i] == 18)  //id=18のマーカーに
+				//{
 					cv::Mat tmatrix = (cv::Mat_<double>(3, 1) << tvecs[i][0], tvecs[i][1], tvecs[i][2]);
 					cv::Mat distance = (cv::Mat_<double>(3, 1));
 					cv::Mat screen = (cv::Mat_<double>(3, 1) << marker_center[i][0], marker_center[i][1], 1);
 
 					//distance = rmatrix.inv() * (cameraMatrix.inv() * screen - tmatrix);
 
-					distanceX = tmatrix.at<double>(0, 0) * kx * marker_size;
-					distanceY = tmatrix.at<double>(1, 0) * ky * marker_size;
-					distanceZ = tmatrix.at<double>(2, 0) * kz * marker_size;
-				}
+					distanceX += tmatrix.at<double>(0, 0) * kx * marker_size;
+					distanceY += tmatrix.at<double>(1, 0) * ky * marker_size;
+					distanceZ += tmatrix.at<double>(2, 0) * kz * marker_size;
+				//}
 
 			}
+
+
+            //平均値を出す
+            distanceX /= marker_ids.size();
+			distanceY /= marker_ids.size();
+			distanceZ /= marker_ids.size();
 
 			ave_angleX /= marker_ids.size();
 			ave_angleY /= marker_ids.size();
@@ -217,7 +228,7 @@ int main(int argc, const char* argv[])
 		}
 
 
-
+        /*
 		float angle = 0;  //平均の角度
 		float t[6] = { 0, 0, 0, 0, 0, 0 };
 		if (marker_ids.size() > 0) {
@@ -249,7 +260,8 @@ int main(int argc, const char* argv[])
 
 			angle /= marker_ids.size();  //角度の平均を出す
 		}
-
+        */
+		 
 	    //サーボモーターを動かす角度を調べる
 		
 		char finish = '\n';
@@ -280,7 +292,7 @@ int main(int argc, const char* argv[])
 
 
         
-		sprintf(valuex_i, "value=%.0f", Servo_angle); //変数の値も含めた表示したい文字列をchar型変数に格納
+		sprintf(value_Servo, "value=%.0f", Servo_angle); //変数の値も含めた表示したい文字列をchar型変数に格納
 
 		//真ん中に円を描画
 		circle(image, Point(average_center[0], average_center[1]), 10, Scalar(255, 0, 0), 3, 4);
@@ -315,21 +327,7 @@ int main(int argc, const char* argv[])
 
     	putText(/*mirror_*/image, /*valuex_i*/Servo_angle_char, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
 
-		//ここからドローンの表示
-
-		//前景画像の変形行列
-		cv::Point2d ctr(drone_image.cols / 2, drone_image.rows / 2);//前景画像の回転中心
-		cv::Mat mat = cv::getRotationMatrix2D(ctr, angle, 1.0);//回転行列の作成
-		mat.at<double>(0, 2) = 640 - average_center[0] - drone_image.cols / 2 -( 50 / 1.414 * (cos(angle * 2 * 3.14 / 360) + sin(angle * 2 * 3.14 / 360)) - 50);//回転後の平行移動量
-		mat.at<double>(1, 2) = average_center[1] - drone_image.rows / 2 - ( 50 / 1.414 * (-sin(angle * 2 * 3.14 / 360) + cos(angle * 2 * 3.14 / 360)) - 50);//回転後の平行移動量
-
-		//アフィン変換の実行
-		cv::warpAffine(drone_image, dstImg, mat, dstImg.size(), CV_INTER_LINEAR, cv::BORDER_TRANSPARENT);
-
-		//ここまで
-
-		cv::namedWindow("where is drone", CV_WINDOW_AUTOSIZE);
-		cv::imshow("where is drone", dstImg);// drone_image);destination);//
+		//取得した値の表示
 
 		cv::imshow("out(Mirror)", /*mirror_*/image);  
 
@@ -353,6 +351,37 @@ int main(int argc, const char* argv[])
 		putText(backimage, value2_y, Point(50, 300), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
 		putText(backimage, value2_z, Point(50, 350), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
 		cv::imshow("angle", backimage);
+
+        int drone_angle = 0;
+		int drone_angleX = 0;
+		int drone_angleY = 0;
+		int drone_angleZ = 0;
+		int drone_distanceX = 0;
+		int drone_distanceY = 0;
+		int drone_distanceZ = 0;
+
+        //操縦パソコンに送る値のケイサン
+		//地上機体との相対的な位置を計算する
+		drone_angle = (atan(distanceY / distanceX) / (3.14 * 2) * 360) + Servo_angle;
+        distanceR = (distanceX / cos(atan(distanceY / distanceX)));
+
+		drone_distanceX = distanceR * cos(drone_angle);
+		drone_distanceY = distanceR * sin(drone_angle);
+		drone_distanceZ = distanceZ;
+
+        drone_angleX = ave_angleX;
+		drone_angleY = ave_angleY;
+		drone_angleZ = ave_angleZ + Servo_angle;
+
+		//操縦パソコンに送る値
+		/*　
+		drone_distanceX
+		drone_distanceY
+		drone_distanceZ
+        drone_angleX
+		drone_angleY
+		drone_angleZ
+		*/
 
 	}
 	cv::waitKey(0);
