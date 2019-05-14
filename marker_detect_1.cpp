@@ -267,10 +267,16 @@ int main(int argc, const char* argv[])
 		char finish = '\n';
         if(marker_ids.size() > 0) {
 			if(count_frame % 30 == 0){
-				
+			    
+                if(atan((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360 > 90){
+					Servo_angle += 180 - (atan((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360) ;
+				}else {
+					Servo_angle += atan((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360;
+				}
+
                 //Servo_angle += atan ( ((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360 );
-                Servo_angle += atan((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360;
-				
+                //Servo_angle += atan((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360;
+				//Servo_angle = average_center[1];//atan((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360;
 
 				//Servo_angle++;
 				
