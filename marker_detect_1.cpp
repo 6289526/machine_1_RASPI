@@ -14,6 +14,7 @@
 #include <thread>
 
 #include "serial.h"
+#include "socket.h"
 
 using namespace std;
 using namespace cv;
@@ -33,7 +34,18 @@ char value_Servo[200];
 int marker_set[4] = { 42, 18,
                       27, 43 };
 
+struct Send_Data{
+	int drone_distanceX;
+	int drone_distanceY;
+	int drone_distanceZ;
+    int drone_angleX;
+	int drone_angleY;
+	int drone_angleZ;
+};
+Send_Data send_data = {};
+
 serial Serial("/dev/ttyACM0", B9600);
+tcp_safe_socket server_tcp;
 
 int main(int argc, const char* argv[])
 {
@@ -58,6 +70,9 @@ int main(int argc, const char* argv[])
 
 	drone_image = cv::imread("drone.png", 1);
 	if (drone_image.data == NULL) return -1;
+
+	server_tcp.init();
+	server_tcp.accept_callback(50200);
 
 	VideoCapture cap(0);  //カメラの映像の読み込み
     cap.set(CV_CAP_PROP_FRAME_WIDTH, 1280);
@@ -396,11 +411,18 @@ int main(int argc, const char* argv[])
 		drone_angleY
 		drone_angleZ
 		*/
-
+		send_data.drone_distanceX = drone_distanceX;
+		send_data.drone_distanceY = drone_distanceY;
+		send_data.drone_distanceZ = drone_distanceZ;
+        send_data.drone_angleX = drone_angleX;
+		send_data.drone_angleY = drone_angleY;
+		send_data.drone_angleZ = drone_angleZ;
+		server_tcp.write(send_data);
 	}
 	cv::waitKey(0);
 
-	serial close();
+	Serial.close();
+	server_tcp.close();
 
 	return 0;
 }
