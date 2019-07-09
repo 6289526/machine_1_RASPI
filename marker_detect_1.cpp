@@ -11,6 +11,8 @@
 #include <iostream>
 #include <iomanip>
 
+#include <thread>
+
 #include "serial.h"
 
 using namespace std;
@@ -19,7 +21,7 @@ using namespace cv;
 int readMatrix(const char* filename, cv::Mat& cameraMat, cv::Mat& distCoeffs);
 int CalibrationCamera(VideoCapture& cap, cv::Mat& cameraMat, cv::Mat& distCoeffs);
 double marker_size = 61;  //マーカーの縦の長さをmmで指定
-double kz = 3.1829046;  //実測値cmと、このパソコンの長さの調整係数
+double kz = 3.1829046 / 3;  //実測値cmと、このパソコンの長さの調整係数
 double kx = 2.06589452;
 double ky = kx;
 
@@ -73,8 +75,12 @@ int main(int argc, const char* argv[])
 		backimage = cv::imread("back2.png", 1);
 		if (backimage.data == NULL) return -1;
 
-		if (!cap.isOpened())
-			return -1;
+		if (!cap.isOpened()){
+			cap.open(0);
+			this_thread::sleep_for(chrono::seconds(1));
+			continue;
+		}
+			//return -1;
 
 		cap >> image;  //imageにカメラの映像を代入
 		if (image.empty())  //映像がないときはとばす 
@@ -286,11 +292,13 @@ int main(int argc, const char* argv[])
 					Servo_angle += 180;
 				}
 				
+                //Servo_angle = 90;
+
 				//Servo_angleの角度にサーボを動かす
 				sprintf(Servo_angle_char, "%.0f", Servo_angle); 
 				//Servo_angle_char[3] = '\n';
 				Serial.write(&Servo_angle_char, 4);
-				Serial.write(&finish, 1);
+				//Serial.write(&finish, 1);
 
 			}
 		}
