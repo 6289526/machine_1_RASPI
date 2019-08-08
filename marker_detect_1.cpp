@@ -44,7 +44,7 @@ struct Send_Data{
 };
 Send_Data send_data = {};
 
-serial Serial("/dev/ttyACM0", B9600);
+//serial Serial("/dev/ttyACM0", B9600);
 tcp_safe_socket server_tcp;
 
 int main(int argc, const char* argv[])
@@ -72,7 +72,7 @@ int main(int argc, const char* argv[])
 	if (drone_image.data == NULL) return -1;
 
 	server_tcp.init();
-	server_tcp.accept_callback(50200);
+	server_tcp.accept(50200);
 
 	VideoCapture cap(0);  //カメラの映像の読み込み
     cap.set(CV_CAP_PROP_FRAME_WIDTH, 1280);
@@ -81,8 +81,22 @@ int main(int argc, const char* argv[])
 	Mat mirror_image;  //表示画面の左右反転の用意
 
 	int key = 0;
+
+	double angleX[6] = { 0,0,0,0,0,0 };
+	double angleY[6] = { 0,0,0,0,0,0 };
+	double angleZ[6] = { 0,0,0,0,0,0 };
+	double ave_angleX = 0;
+	double ave_angleY = 0;
+	double ave_angleZ = 0;
+
+	double distanceX = 0;
+	double distanceY = 0;
+	double distanceZ = 0;
+	double distanceR = 0;
+
 	while ((key = cv::waitKey(1)) != 'q') {  //qが押されるまで繰り返す
 
+		cout << server_tcp.is_connect();
 		//背景画像の読み込み
 		dstImg = cv::imread("back.png", 1);
 		if (dstImg.data == NULL) return -1;
@@ -181,21 +195,24 @@ int main(int argc, const char* argv[])
 		cv::Mat rmatrix = (cv::Mat_<double>(3, 3));
 
 
-		double angleX[6] = { 0,0,0,0,0,0 };
-		double angleY[6] = { 0,0,0,0,0,0 };
-		double angleZ[6] = { 0,0,0,0,0,0 };
-		double ave_angleX = 0;
-		double ave_angleY = 0;
-		double ave_angleZ = 0;
-
-		double distanceX = 0;
-		double distanceY = 0;
-		double distanceZ = 0;
-		double distanceR = 0;
+		
 
 		//マーカーの3軸の検出、ｘｙｚの取得
 		if (marker_ids.size() > 0)
 		{
+
+			double angleX[6] = { 0,0,0,0,0,0 };
+			double angleY[6] = { 0,0,0,0,0,0 };
+			double angleZ[6] = { 0,0,0,0,0,0 };
+			double ave_angleX = 0;
+			double ave_angleY = 0;
+			double ave_angleZ = 0;
+
+			double distanceX = 0;
+			double distanceY = 0;
+			double distanceZ = 0;
+			double distanceR = 0;
+			
 			cv::aruco::drawDetectedMarkers(image, marker_corners, marker_ids);
 			std::vector<cv::Vec3d> rvecs, tvecs;
 			cv::aruco::estimatePoseSingleMarkers(marker_corners, 0.05, cameraMatrix, distCoeffs, rvecs, tvecs);
@@ -311,9 +328,9 @@ int main(int argc, const char* argv[])
 
 				//Servo_angleの角度にサーボを動かす
 				sprintf(Servo_angle_char, "%.0f", Servo_angle); 
-				//Servo_angle_char[3] = '\n';
-				Serial.write(&Servo_angle_char, 4);
-				//Serial.write(&finish, 1);
+				  //Servo_angle_char[3] = '\n';
+				//Serial.write(&Servo_angle_char, 4);
+				  //Serial.write(&finish, 1);
 
 			}
 		}
@@ -391,16 +408,22 @@ int main(int argc, const char* argv[])
 
         //操縦パソコンに送る値のケイサン
 		//地上機体との相対的な位置を計算する
+		/*
 		drone_angle = (atan(distanceY / distanceX) / (3.14 * 2) * 360) + Servo_angle;
         distanceR = (distanceX / cos(atan(distanceY / distanceX)));
 
 		drone_distanceX = distanceR * cos(drone_angle);
 		drone_distanceY = distanceR * sin(drone_angle);
 		drone_distanceZ = distanceZ;
+		*/
+	    //サーボモーターを動かさない場合
+		drone_distanceX = distanceX;
+		drone_distanceY = distanceY;
+		drone_distanceZ = distanceZ;
 
         drone_angleX = ave_angleX;
 		drone_angleY = ave_angleY;
-		drone_angleZ = ave_angleZ + Servo_angle;
+		drone_angleZ = ave_angleZ;
 
 		//操縦パソコンに送る値
 		/*　
@@ -421,7 +444,7 @@ int main(int argc, const char* argv[])
 	}
 	cv::waitKey(0);
 
-	Serial.close();
+	//Serial.close();
 	server_tcp.close();
 
 	return 0;
