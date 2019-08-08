@@ -2,6 +2,7 @@
     "files.associations": {
         "thread": "cpp",
         "*.tcc": "cpp",
-        "atomic": "cpp"
+        "atomic": "cpp",
+        "ostream": "cpp"
     }
 }
