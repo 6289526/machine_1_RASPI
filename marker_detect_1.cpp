@@ -2,6 +2,7 @@
 
 
 /// 通信関係のコメントアウト
+//// 文字出力をコメントアウト
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/aruco.hpp>
@@ -279,7 +280,7 @@ int main(int argc, const char* argv[])
 
 		flip(image, mirror_image, 1);
 
-    	putText(/*mirror_*/image, /*valuex_i*/Servo_angle_char, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+    	//// putText(/*mirror_*/image, /*valuex_i*/Servo_angle_char, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 
 		//取得した値の表示
 
@@ -287,6 +288,8 @@ int main(int argc, const char* argv[])
 
 		cv::namedWindow("angle", cv::WINDOW_AUTOSIZE);
 
+		////
+		/*
 		char value_x[100];
 		char value_y[100];
 		char value_z[100];
@@ -306,7 +309,8 @@ int main(int argc, const char* argv[])
 		putText(backimage, value2_x, Point(50, 250), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 		putText(backimage, value2_y, Point(50, 300), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 		putText(backimage, value2_z, Point(50, 350), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
-
+		*/
+		////
 		cv::imshow("angle", backimage);
 
         int drone_angle = 0;
