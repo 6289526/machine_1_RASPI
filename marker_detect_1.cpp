@@ -1,5 +1,8 @@
 ﻿// marker_detect_1.cpp : このファイルには 'main' 関数が含まれています。プログラム実行の開始と終了がそこで行われます。
-//
+
+
+/// 通信関係のコメントアウト
+
 #include <opencv2/opencv.hpp>
 #include <opencv2/aruco.hpp>
 #include <iostream>
@@ -38,7 +41,7 @@ struct Send_Data{
 };
 Send_Data send_data = {};
 
-Safe_Server server_tcp;
+/// Safe_Server server_tcp;
 
 int main(int argc, const char* argv[])
 {
@@ -64,10 +67,10 @@ int main(int argc, const char* argv[])
 	drone_image = cv::imread("drone.png", 1);
 	if (drone_image.data == NULL) return -1;
 
-	server_tcp.init(50200);
-	server_tcp.start_accept(false);
+	/// server_tcp.init(50200);
+	/// server_tcp.start_accept(false);
 
-	thread th_server([&] {server_tcp.run(); });
+	/// thread th_server([&] {server_tcp.run(); });
 
 	VideoCapture cap(0);  //カメラの映像の読み込み
     cap.set(3, 1280);
@@ -91,7 +94,7 @@ int main(int argc, const char* argv[])
 
 	while ((key = cv::waitKey(1)) != 'q') {  //qが押されるまで繰り返す
 
-		cout << server_tcp.is_open(0) << endl;
+		/// cout << server_tcp.is_open(0) << endl;
 		//背景画像の読み込み
 		dstImg = cv::imread("back.png", 1);
 		if (dstImg.data == NULL) return -1;
@@ -333,29 +336,29 @@ int main(int argc, const char* argv[])
 		send_data.drone_angleY = drone_angleY;
 		send_data.drone_angleZ = drone_angleZ;
 
-		if(server_tcp.is_open(0)){
-			server_tcp.send(0, send_data);
+		/// if(server_tcp.is_open(0)){
+		/// 	server_tcp.send(0, send_data);
 
-			char dummy;
-			if(server_tcp.available(0) >= 1)
-				server_tcp.read(0, &dummy);
-		}else{
-			ave_angleX = 0;
-			ave_angleY = 0;
-			ave_angleZ = 0;
+		/// 	char dummy;
+		/// 	if(server_tcp.available(0) >= 1)
+		/// 		server_tcp.read(0, &dummy);
+		/// }else{
+		/// 	ave_angleX = 0;
+		/// 	ave_angleY = 0;
+		/// 	ave_angleZ = 0;
 
-			distanceX = 0;
-			distanceY = 0;
-			distanceZ = 0;
-			distanceR = 0;
-		}
+		/// 	distanceX = 0;
+		/// 	distanceY = 0;
+		/// 	distanceZ = 0;
+		/// 	distanceR = 0;
+		/// }
 	}
 	cv::waitKey(0);
 
 	//Serial.close();
-	server_tcp.stop();
-	if(th_server.joinable())
-		th_server.join();
+	/// server_tcp.stop();
+	///if(th_server.joinable())
+	///	th_server.join();
 
 	return 0;
 }
