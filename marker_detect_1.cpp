@@ -1,13 +1,8 @@
 ﻿// marker_detect_1.cpp : このファイルには 'main' 関数が含まれています。プログラム実行の開始と終了がそこで行われます。
 //
 //#include "pch.h"
-#include <opencv2/core.hpp>
+#include <opencv2/opencv.hpp>
 #include <opencv2/aruco.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
 #include <iostream>
 #include <iomanip>
 
@@ -77,8 +72,10 @@ int main(int argc, const char* argv[])
 	thread th_server([&] {server_tcp.run(); });
 
 	VideoCapture cap(0);  //カメラの映像の読み込み
-    cap.set(CV_CAP_PROP_FRAME_WIDTH, 1280);
-	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
+    //cap.set(CV_CAP_PROP_FRAME_WIDTH, 1280);
+    cap.set(3, 1280);
+	//cap.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
+	cap.set(4, 720);
 
 	Mat mirror_image;  //表示画面の左右反転の用意
 
@@ -197,7 +194,7 @@ int main(int argc, const char* argv[])
 		cv::Mat rmatrix = (cv::Mat_<double>(3, 3));
 
 
-		
+
 
 		//マーカーの3軸の検出、ｘｙｚの取得
 		if (marker_ids.size() > 0)
@@ -381,31 +378,39 @@ int main(int argc, const char* argv[])
 			flip(image, mirror_image, 1);
 		//}
 
-    	putText(/*mirror_*/image, /*valuex_i*/Servo_angle_char, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+    	//putText(/*mirror_*/image, /*valuex_i*/Servo_angle_char, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+    	putText(/*mirror_*/image, /*valuex_i*/Servo_angle_char, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 
 		//取得した値の表示
 
 		cv::imshow("out(Mirror)", /*mirror_*/image);  
 
-		cv::namedWindow("angle", CV_WINDOW_AUTOSIZE);
+		cv::namedWindow("angle", cv::WINDOW_AUTOSIZE);
 		char value_x[100];
 		char value_y[100];
 		char value_z[100];
 		sprintf(value_x, "angle X =%f", ave_angleX);
 		sprintf(value_y, "angle Y =%f", ave_angleY);
 		sprintf(value_z, "angle Z =%f", ave_angleZ);
-		putText(backimage, value_x, Point(50, 100), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
-		putText(backimage, value_y, Point(50, 150), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
-		putText(backimage, value_z, Point(50, 200), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+		// putText(backimage, value_x, Point(50, 100), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+		// putText(backimage, value_y, Point(50, 150), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+		// putText(backimage, value_z, Point(50, 200), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+		putText(backimage, value_x, Point(50, 100), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+		putText(backimage, value_y, Point(50, 150), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+		putText(backimage, value_z, Point(50, 200), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 		char value2_x[100];
 		char value2_y[100];
 		char value2_z[100];
 		sprintf(value2_x, "distance X =%f cm", distanceX);
 		sprintf(value2_y, "distance Y =%f cm", distanceY);
 		sprintf(value2_z, "distance Z =%f cm", distanceZ);
-		putText(backimage, value2_x, Point(50, 250), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
-		putText(backimage, value2_y, Point(50, 300), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
-		putText(backimage, value2_z, Point(50, 350), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+		// putText(backimage, value2_x, Point(50, 250), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+		// putText(backimage, value2_y, Point(50, 300), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+		// putText(backimage, value2_z, Point(50, 350), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2, CV_AA);
+		putText(backimage, value2_x, Point(50, 250), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+		putText(backimage, value2_y, Point(50, 300), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+		putText(backimage, value2_z, Point(50, 350), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+
 		cv::imshow("angle", backimage);
 
         int drone_angle = 0;
@@ -481,12 +486,14 @@ int main(int argc, const char* argv[])
 int readMatrix(const char* filename, cv::Mat& cameraMat, cv::Mat& distCoeffs) {
 	try{
 		// (2)open file storage
-		cv::FileStorage cvfs(filename, CV_STORAGE_READ);
+		cv::FileStorage cvfs(filename, cv::FileStorage::READ);
 
+		/***************************************************************
 		// (3)read data from file storage
 		cv::FileNode node(cvfs.fs, NULL); // Get Top Node
 		read(node["cameraMatrix"], cameraMat);
 		read(node["distCoeffs"], distCoeffs);
+		*******************************************************************/
 	}
 	catch (std::exception e) {
 		return -1;
@@ -546,8 +553,8 @@ int CalibrationCamera(VideoCapture& cap, cv::Mat& cameraMat, cv::Mat& distCoeff)
 			continue;
 
 		//ーーー制度を高めるーーー
-		cvtColor(src_image, gray_image, CV_BGR2GRAY);
-		cornerSubPix(gray_image, imageCorners, Size(9, 9), Size(-1, -1), TermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 30, 0.1));
+		cvtColor(src_image, gray_image, cv::COLOR_BGR2GRAY);
+		cornerSubPix(gray_image, imageCorners, Size(9, 9), Size(-1, -1), TermCriteria(cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS, 30, 0.1));
 		////ーーーコーナーを描画するーーー
 		dst_image = src_image.clone();
 		drawChessboardCorners(dst_image, BOARD_SIZE, imageCorners, found);
