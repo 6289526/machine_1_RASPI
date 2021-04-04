@@ -1,11 +1,5 @@
 ﻿// marker_detect_1.cpp : このファイルには 'main' 関数が含まれています。プログラム実行の開始と終了がそこで行われます。
 
-
-/// 通信関係のコメントアウト
-//// 文字出力をコメントアウト
-///// ウィンドウをコメントアウト
-////// 画像読み込みコメントアウト
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/aruco.hpp>
 #include <iostream>
@@ -20,10 +14,11 @@ using namespace std;
 using namespace cv;
 
 const int MAX_MARKER_NUM = 6; // 一度に読めるマーカーの数
+const double MARKER_SIZE = 61;  //マーカーの縦の長さをmmで指定
 
 int readMatrix(const char* filename, cv::Mat& cameraMat, cv::Mat& distCoeffs);
 int CalibrationCamera(VideoCapture& cap, cv::Mat& cameraMat, cv::Mat& distCoeffs);
-double marker_size = 61;  //マーカーの縦の長さをmmで指定
+
 double kz = 3.1829046 / 3;  //実測値cmと、このパソコンの長さの調整係数
 double kx = 2.06589452;
 double ky = kx;
@@ -46,20 +41,20 @@ struct Send_Data{
 };
 Send_Data send_data = {};
 
-/// Safe_Server server_tcp;
+Safe_Server server_tcp;
 
 int main(int argc, const char* argv[])
 {
 	
-	/////// cv::Mat drone_image;
+	cv::Mat drone_image;
 	//背景画像
-	////// cv::Mat dstImg;
-	////// cv::Mat backimage;
+	cv::Mat dstImg;
+	cv::Mat backimage;
 
 	cv::Mat image;
-	cv::Mat cameraMatrix;// = (cv::Mat_<double>(3, 3) << 4.50869314e+02, 0, 2.47413306e+02, 0, 4.55471466e+02, 1.85222260e+02, 0, 0, 1);
-	cv::Mat distCoeffs;// = (cv::Mat_<double>(1, 5) << 4.65341144e-01, -2.18649613e+00, 5.14274386e-03, 3.62427799e-03, 3.71240124e+00);
-	readMatrix("caliburation.xml",cameraMatrix, distCoeffs);  //xmlファイルからcameraMatrixとdistCoeffsを読み込む
+	cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) << 4.50869314e+02, 0, 2.47413306e+02, 0, 4.55471466e+02, 1.85222260e+02, 0, 0, 1);
+	cv::Mat distCoeffs = (cv::Mat_<double>(1, 5) << 4.65341144e-01, -2.18649613e+00, 5.14274386e-03, 3.62427799e-03, 3.71240124e+00);
+	// readMatrix("caliburation.xml",cameraMatrix, distCoeffs);  //xmlファイルからcameraMatrixとdistCoeffsを読み込む
 	//dictionary生成
 	const cv::aruco::PREDEFINED_DICTIONARY_NAME dictionary_name = cv::aruco::DICT_4X4_50;
 	cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(dictionary_name);
@@ -69,13 +64,13 @@ int main(int argc, const char* argv[])
 	std::vector<std::vector<cv::Point2f>> marker_corners;
 	cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
 
-	////// drone_image = cv::imread("drone.png", 1);
-	////// if (drone_image.data == NULL) return -1;
+	drone_image = cv::imread("drone.png", 1);
+	if (drone_image.data == NULL) return -1;
 
-	/// server_tcp.init(50200);
-	/// server_tcp.start_accept(false);
+	server_tcp.init(50200);
+	server_tcp.start_accept(false);
 
-	/// thread th_server([&] {server_tcp.run(); });
+	thread th_server([&] {server_tcp.run(); });
 
 	VideoCapture cap(0);  //カメラの映像の読み込み
     cap.set(3, 1280);
@@ -103,13 +98,13 @@ int main(int argc, const char* argv[])
 
 	while ((key = cv::waitKey(1)) != 'q') {  //qが押されるまで繰り返す
 
-		/// cout << server_tcp.is_open(0) << endl;
+		cout << server_tcp.is_open(0) << endl;
 		//背景画像の読み込み
-		////// dstImg = cv::imread("back.png", 1);
-		////// if (dstImg.data == NULL) return -1;
+		dstImg = cv::imread("back.png", 1);
+		if (dstImg.data == NULL) return -1;
 
-		////// backimage = cv::imread("back2.png", 1);
-		////// if (backimage.data == NULL) return -1;
+		backimage = cv::imread("back2.png", 1);
+		if (backimage.data == NULL) return -1;
 
 		if (!cap.isOpened()){
 			cap.open(0);
@@ -210,7 +205,7 @@ int main(int argc, const char* argv[])
 
 			cv::aruco::drawDetectedMarkers(image, marker_corners, marker_ids);
 			std::vector<cv::Vec3d> rvecs, tvecs;
-			cv::aruco::estimatePoseSingleMarkers(marker_corners, 0.05, cameraMatrix, distCoeffs, rvecs, tvecs);
+			cv::aruco::estimatePoseSingleMarkers(marker_corners, MARKER_SIZE * 0.001, cameraMatrix, distCoeffs, rvecs, tvecs);
 			for (int i = 0; i < marker_ids.size(); i++)
 			{
 				cv::aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 0.1);
@@ -237,9 +232,9 @@ int main(int argc, const char* argv[])
 					cv::Mat distance = (cv::Mat_<double>(3, 1));
 					cv::Mat screen = (cv::Mat_<double>(3, 1) << marker_center[i][0], marker_center[i][1], 1);
 
-					distanceX += tmatrix.at<double>(0, 0) * kx * marker_size;
-					distanceY += tmatrix.at<double>(1, 0) * ky * marker_size;
-					distanceZ += tmatrix.at<double>(2, 0) * kz * marker_size;
+					distanceX += tmatrix.at<double>(0, 0) * kx * MARKER_SIZE;
+					distanceY += tmatrix.at<double>(1, 0) * ky * MARKER_SIZE;
+					distanceZ += tmatrix.at<double>(2, 0) * kz * MARKER_SIZE;
 			}
 
 
@@ -285,16 +280,14 @@ int main(int argc, const char* argv[])
 
 		flip(image, mirror_image, 1);
 
-    	//// putText(/*mirror_*/image, /*valuex_i*/Servo_angle_char, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+    	putText(/*mirror_*/image, /*valuex_i*/Servo_angle_char, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 
 		//取得した値の表示
 
 		cv::imshow("out(Mirror)", /*mirror_*/image);  
 
-		///// cv::namedWindow("angle", cv::WINDOW_AUTOSIZE);
-
-		////
-		/*
+		cv::namedWindow("angle", cv::WINDOW_AUTOSIZE);
+		
 		char value_x[100];
 		char value_y[100];
 		char value_z[100];
@@ -314,9 +307,8 @@ int main(int argc, const char* argv[])
 		putText(backimage, value2_x, Point(50, 250), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 		putText(backimage, value2_y, Point(50, 300), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 		putText(backimage, value2_z, Point(50, 350), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
-		*/
-		////
-		///// cv::imshow("angle", backimage);
+
+		cv::imshow("angle", backimage);
 
         int drone_angle = 0;
 		int drone_angleX = 0;
@@ -345,29 +337,29 @@ int main(int argc, const char* argv[])
 		send_data.drone_angleY = drone_angleY;
 		send_data.drone_angleZ = drone_angleZ;
 
-		/// if(server_tcp.is_open(0)){
-		/// 	server_tcp.send(0, send_data);
+		if(server_tcp.is_open(0)){
+			server_tcp.send(0, send_data);
 
-		/// 	char dummy;
-		/// 	if(server_tcp.available(0) >= 1)
-		/// 		server_tcp.read(0, &dummy);
-		/// }else{
-		/// 	ave_angleX = 0;
-		/// 	ave_angleY = 0;
-		/// 	ave_angleZ = 0;
+			char dummy;
+			if(server_tcp.available(0) >= 1)
+		 		server_tcp.read(0, &dummy);
+		 }else{
+		 	ave_angleX = 0;
+		 	ave_angleY = 0;
+		 	ave_angleZ = 0;
 
-		/// 	distanceX = 0;
-		/// 	distanceY = 0;
-		/// 	distanceZ = 0;
-		/// 	distanceR = 0;
-		/// }
+		 	distanceX = 0;
+		 	distanceY = 0;
+		 	distanceZ = 0;
+		 	distanceR = 0;
+		 }
 	}
 	cv::waitKey(0);
 
 	//Serial.close();
-	/// server_tcp.stop();
-	///if(th_server.joinable())
-	///	th_server.join();
+	server_tcp.stop();
+	if(th_server.joinable())
+		th_server.join();
 
 	return 0;
 }
