@@ -3,6 +3,8 @@
 
 /// 通信関係のコメントアウト
 //// 文字出力をコメントアウト
+///// ウィンドウをコメントアウト
+////// 画像読み込みコメントアウト
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/aruco.hpp>
@@ -16,6 +18,8 @@
 
 using namespace std;
 using namespace cv;
+
+const int MAX_MARKER_NUM = 6; // 一度に読めるマーカーの数
 
 int readMatrix(const char* filename, cv::Mat& cameraMat, cv::Mat& distCoeffs);
 int CalibrationCamera(VideoCapture& cap, cv::Mat& cameraMat, cv::Mat& distCoeffs);
@@ -47,10 +51,10 @@ Send_Data send_data = {};
 int main(int argc, const char* argv[])
 {
 	
-	cv::Mat drone_image;
+	/////// cv::Mat drone_image;
 	//背景画像
-	cv::Mat dstImg;
-	cv::Mat backimage;
+	////// cv::Mat dstImg;
+	////// cv::Mat backimage;
 
 	cv::Mat image;
 	cv::Mat cameraMatrix;// = (cv::Mat_<double>(3, 3) << 4.50869314e+02, 0, 2.47413306e+02, 0, 4.55471466e+02, 1.85222260e+02, 0, 0, 1);
@@ -65,8 +69,8 @@ int main(int argc, const char* argv[])
 	std::vector<std::vector<cv::Point2f>> marker_corners;
 	cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
 
-	drone_image = cv::imread("drone.png", 1);
-	if (drone_image.data == NULL) return -1;
+	////// drone_image = cv::imread("drone.png", 1);
+	////// if (drone_image.data == NULL) return -1;
 
 	/// server_tcp.init(50200);
 	/// server_tcp.start_accept(false);
@@ -81,9 +85,13 @@ int main(int argc, const char* argv[])
 
 	int key = 0;
 
-	double angleX[6] = { 0,0,0,0,0,0 };
-	double angleY[6] = { 0,0,0,0,0,0 };
-	double angleZ[6] = { 0,0,0,0,0,0 };
+	double angleX[MAX_MARKER_NUM];
+	double angleY[MAX_MARKER_NUM];
+	double angleZ[MAX_MARKER_NUM];
+	for (int i = 0; i < MAX_MARKER_NUM; ++i) {
+		angleX[i] = angleY[i] = angleZ[i] = 0.0;
+	}
+
 	double ave_angleX = 0;
 	double ave_angleY = 0;
 	double ave_angleZ = 0;
@@ -97,11 +105,11 @@ int main(int argc, const char* argv[])
 
 		/// cout << server_tcp.is_open(0) << endl;
 		//背景画像の読み込み
-		dstImg = cv::imread("back.png", 1);
-		if (dstImg.data == NULL) return -1;
+		////// dstImg = cv::imread("back.png", 1);
+		////// if (dstImg.data == NULL) return -1;
 
-		backimage = cv::imread("back2.png", 1);
-		if (backimage.data == NULL) return -1;
+		////// backimage = cv::imread("back2.png", 1);
+		////// if (backimage.data == NULL) return -1;
 
 		if (!cap.isOpened()){
 			cap.open(0);
@@ -126,10 +134,15 @@ int main(int argc, const char* argv[])
 
 
 		//中心等の座標の取得
-		float marker_location[6][8] = {};
-		float marker_center[6][2] = {};
-		float all_marker_center[6][2] = {};
+		float marker_location[MAX_MARKER_NUM][8] = {};
+		float marker_center[MAX_MARKER_NUM][2] = {};
+		float all_marker_center[MAX_MARKER_NUM][2] = {};
 		float average_center[2] = {};
+
+		if (MAX_MARKER_NUM < marker_ids.size()) {
+			std::cout << "マーカーが多すぎる　：　" << marker_ids.size() << " 枚\n";
+			continue;
+		}
 
         //それぞれのマーカーの中心のスクリーン座標系を取得
 		for (int i = 0; i < marker_ids.size(); i++)
@@ -146,49 +159,42 @@ int main(int argc, const char* argv[])
 		}
 
 		//4つのマーカーのスクリーン座標系の中心の取得
-		int z = 0;
-		for (int i = 0; i < marker_ids.size(); i++) {
+		int i = 0;
+		for (; i < marker_ids.size(); i++) {
 			switch (marker_ids[i])
 			{
 			case 42:
 				all_marker_center[i][0] = marker_location[i][4] + 0.6071 * (marker_location[i][4] - marker_center[i][0]);
 				all_marker_center[i][1] = marker_location[i][5] + 0.5 * (marker_location[i][5] - marker_center[i][1]);
-				z++;
 				break;
 
 			case 18:
 				all_marker_center[i][0] = marker_location[i][6] - 0.6071 * (marker_center[i][0] - marker_location[i][6]);
 				all_marker_center[i][1] = marker_location[i][7] + 0.5 * (marker_location[i][7] - marker_center[i][1]);
-				z++;
 				break;
 
 			case 43:
 				all_marker_center[i][0] = marker_location[i][0] - 0.6071 * (marker_center[i][0] - marker_location[i][0]);
 				all_marker_center[i][1] = marker_location[i][1] - 0.5 * (marker_center[i][1] - marker_location[i][1]);
-				z++;
 				break;
 
 			case 27:
 				all_marker_center[i][0] = marker_location[i][2] + 0.6071 * (marker_location[i][2] - marker_center[i][0]);
 				all_marker_center[i][1] = marker_location[i][3] - 0.5 * (marker_center[i][1] - marker_location[i][3]);
-				z++;
 				break;
 			}
 			average_center[0] = average_center[0] + all_marker_center[i][0];
 			average_center[1] = average_center[1] + all_marker_center[i][1];
 		}
 
-		average_center[0] = average_center[0] / z;  //x座標
-		average_center[1] = average_center[1] / z;  //y座標
+		average_center[0] = average_center[0] / i;  //x座標
+		average_center[1] = average_center[1] / i;  //y座標
 
 
         //カメラからARマーカーまでの距離を求める
 
         //回転行列を入れるための配列
 		cv::Mat rmatrix = (cv::Mat_<double>(3, 3));
-
-
-
 
 		//マーカーの3軸の検出、ｘｙｚの取得
 		if (marker_ids.size() > 0)
@@ -250,7 +256,6 @@ int main(int argc, const char* argv[])
 		 
 	    //サーボモーターを動かす角度を調べる
 		
-		char finish = '\n';
         if(marker_ids.size() > 0) {
 			if(count_frame % 30 == 0){
 			    
@@ -286,7 +291,7 @@ int main(int argc, const char* argv[])
 
 		cv::imshow("out(Mirror)", /*mirror_*/image);  
 
-		cv::namedWindow("angle", cv::WINDOW_AUTOSIZE);
+		///// cv::namedWindow("angle", cv::WINDOW_AUTOSIZE);
 
 		////
 		/*
@@ -311,7 +316,7 @@ int main(int argc, const char* argv[])
 		putText(backimage, value2_z, Point(50, 350), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 		*/
 		////
-		cv::imshow("angle", backimage);
+		///// cv::imshow("angle", backimage);
 
         int drone_angle = 0;
 		int drone_angleX = 0;
