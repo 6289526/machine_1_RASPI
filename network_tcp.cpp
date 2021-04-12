@@ -23,17 +23,17 @@ namespace asio = boost::asio;
 using asio::ip::tcp;
 using namespace boost::system;
 
-//ƒfƒoƒbƒO‚Íƒlƒbƒgƒ[ƒNó‘Ô‚ğ•\¦
+//ï¿½fï¿½oï¿½bï¿½Oï¿½ï¿½ï¿½Íƒlï¿½bï¿½gï¿½ï¿½ï¿½[ï¿½Nï¿½ï¿½Ô‚ï¿½\ï¿½ï¿½
 #ifdef __DEBUG_
 #define SHOW_NETWORK_STATUS
 #endif
 
-//io_service‚ÌÚ×‚Í‚±‚±‚ğQÆ<http://yutopp.hateblo.jp/entry/2011/12/15/001518>
-//ã‚ÌƒVƒ‡[ƒg”Å(ƒ}ƒ‹ƒ`ƒXƒŒƒbƒh‚Í‚±‚Á‚¿‚ª‹ß‚¢)<https://qiita.com/sileader/items/74c667e51d4bb36cafab>
-//ˆÈ‰º‚ÌƒNƒ‰ƒX‚Ì‘å‚à‚Æ‚Í‚±‚Á‚¿<https://boostjp.github.io/tips/network/tcp.html>
+//io_serviceï¿½ÌÚ×‚Í‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Qï¿½ï¿½<http://yutopp.hateblo.jp/entry/2011/12/15/001518>
+//ï¿½ï¿½ÌƒVï¿½ï¿½ï¿½[ï¿½gï¿½ï¿½(ï¿½}ï¿½ï¿½ï¿½`ï¿½Xï¿½ï¿½ï¿½bï¿½hï¿½Í‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß‚ï¿½)<https://qiita.com/sileader/items/74c667e51d4bb36cafab>
+//ï¿½È‰ï¿½ï¿½ÌƒNï¿½ï¿½ï¿½Xï¿½Ì‘ï¿½ï¿½ï¿½Æ‚Í‚ï¿½ï¿½ï¿½ï¿½ï¿½<https://boostjp.github.io/tips/network/tcp.html>
 /*
-//ƒoƒbƒtƒ@
-//ƒRƒs[ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+//ï¿½oï¿½bï¿½tï¿½@
+//ï¿½Rï¿½sï¿½[ï¿½Rï¿½ï¿½ï¿½Xï¿½gï¿½ï¿½ï¿½Nï¿½^
 Buffer::Buffer(const Buffer& src){
 mtx.lock();
 data_ = src.data_;
@@ -75,13 +75,13 @@ mtx.unlock();
 return size;
 }
 
-//\‘¢‘Ì‚È‚Ç‚Í‚±‚ê‚Åˆê”­
+//ï¿½\ï¿½ï¿½ï¿½Ì‚È‚Ç‚Í‚ï¿½ï¿½ï¿½Åˆê”­
 template <class T>
 size_t Buffer::regist(const T& data){
 return regist((void*)&data, sizeof(T));
 }
 
-//ƒJƒXƒ^ƒ€
+//ï¿½Jï¿½Xï¿½^ï¿½ï¿½
 size_t Buffer::regist(void* src, size_t size){
 mtx.lock();
 unsigned int old_size = data_.size();
@@ -91,7 +91,7 @@ mtx.unlock();
 return data_.size();
 }
 
-//ƒTƒCƒY
+//ï¿½Tï¿½Cï¿½Y
 size_t Buffer::size(){
 mtx.lock();
 size_t tmp = data_.size();
@@ -99,7 +99,7 @@ mtx.unlock();
 return tmp;
 }
 
-//ƒf[ƒ^ƒ|ƒCƒ“ƒ^
+//ï¿½fï¿½[ï¿½^ï¿½|ï¿½Cï¿½ï¿½ï¿½^
 void* Buffer::ptr(){
 mtx.lock();
 void* tmp = &data_[0];
@@ -107,7 +107,7 @@ mtx.unlock();
 return tmp;
 }
 
-//ƒf[ƒ^
+//ï¿½fï¿½[ï¿½^
 std::vector<char> Buffer::data(){
 mtx.lock();
 auto tmp = data_;
@@ -145,7 +145,7 @@ bool Client::connect(std::string address, string port, bool wait, Connect_Func c
 	tcp::resolver::iterator resolve_query;
 	boost::system::error_code ec;
 
-	//Ú‘±’†‚ÍÄÚ‘±‚µ‚È‚¢
+	//ï¿½Ú‘ï¿½ï¿½ï¿½ï¿½ÍÄÚ‘ï¿½ï¿½ï¿½ï¿½È‚ï¿½
 	if (is_connecting)
 		return false;
 
@@ -160,7 +160,7 @@ bool Client::connect(std::string address, string port, bool wait, Connect_Func c
 
 	tcp::endpoint endpoint(address_in, port_in);
 
-	//Ú‘±ƒtƒ‰ƒOtrue
+	//ï¿½Ú‘ï¿½ï¿½tï¿½ï¿½ï¿½Otrue
 	is_connecting = true;
 	socket_.async_connect(endpoint,
 		boost::bind(&Client::on_connect,
@@ -170,7 +170,7 @@ bool Client::connect(std::string address, string port, bool wait, Connect_Func c
 		)
 	);
 
-	//wait‚ªtrue‚È‚ç‚±‚±‚Å‘Ò‚Â
+	//waitï¿½ï¿½trueï¿½È‚ç‚±ï¿½ï¿½ï¿½Å‘Ò‚ï¿½
 	if (wait) {
 		io_service_.reset();
 		io_service_.run();
@@ -188,11 +188,11 @@ bool Client::connect(std::string address, string port, bool wait, Connect_Func c
 
 void Client::on_connect(const boost::system::error_code& error, Connect_Func connect_func)
 {
-	//Ú‘±ƒtƒ‰ƒO‚ğØ‚é
+	//ï¿½Ú‘ï¿½ï¿½tï¿½ï¿½ï¿½Oï¿½ï¿½Ø‚ï¿½
 	is_connecting = false;
 	if (error) {
 		std::cout << "connect failed : " << error.message() << std::endl;
-		socket_.close();	//ƒ\ƒPƒbƒg‚Í•Â‚¶‚é
+		socket_.close();	//ï¿½\ï¿½Pï¿½bï¿½gï¿½Í•Â‚ï¿½ï¿½ï¿½
 	}
 	else {
 		std::cout << "connected" << std::endl;
@@ -201,19 +201,19 @@ void Client::on_connect(const boost::system::error_code& error, Connect_Func con
 	if (connect_func)
 		connect_func(&socket_, error);
 }
-//‘—Mƒoƒbƒtƒ@‚É’Ç‰Á(ƒJƒXƒ^ƒ€)
+//ï¿½ï¿½ï¿½Mï¿½oï¿½bï¿½tï¿½@ï¿½É’Ç‰ï¿½(ï¿½Jï¿½Xï¿½^ï¿½ï¿½)
 void Client::push_sendbuf(const void* data, size_t size) {
 	send_data_.regist((void*)data, size);
 }
 
-// ƒƒbƒZ[ƒW‘—M
+// ï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½Wï¿½ï¿½ï¿½M
 void Client::send()
 {
 	send(&send_data_.data()[0], send_data_.size());
 	send_data_.clear();
 }
 
-// ƒƒbƒZ[ƒW‘—M
+// ï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½Wï¿½ï¿½ï¿½M
 void Client::send(const void* buffer, size_t size)
 {
 	if (!socket_.is_open())
@@ -229,9 +229,9 @@ void Client::send(const void* buffer, size_t size)
 	);
 }
 
-// ‘—MŠ®—¹
-// error : ƒGƒ‰[î•ñ
-// bytes_transferred : ‘—M‚µ‚½ƒoƒCƒg”
+// ï¿½ï¿½ï¿½Mï¿½ï¿½ï¿½ï¿½
+// error : ï¿½Gï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½
+// bytes_transferred : ï¿½ï¿½ï¿½Mï¿½ï¿½ï¿½ï¿½ï¿½oï¿½Cï¿½gï¿½ï¿½
 void Client::on_send(const boost::system::error_code& error)
 {
 	if (error) {
@@ -244,7 +244,7 @@ void Client::on_send(const boost::system::error_code& error)
 	}
 }
 
-// ƒƒbƒZ[ƒWóM
+// ï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½Wï¿½ï¿½M
 void Client::start_receive(size_t recv_size, Recv_TCP_Func recv_func)
 {
 	if (!socket_.is_open())
@@ -259,7 +259,7 @@ void Client::start_receive(size_t recv_size, Recv_TCP_Func recv_func)
 			asio::placeholders::error, recv_buf, recv_func));
 }
 
-// ‘—óMŠJn
+// ï¿½ï¿½ï¿½ï¿½Mï¿½Jï¿½n
 void Client::run()
 {
 	shared_ptr<asio::io_service::work> w(new asio::io_service::work(io_service_));
@@ -269,7 +269,7 @@ void Client::run()
 	io_service_.run();
 }
 
-// ‘—óM’â~
+// ï¿½ï¿½ï¿½ï¿½Mï¿½ï¿½~
 boost::system::error_code Client::stop()
 {
 	boost::system::error_code ec;
@@ -281,9 +281,9 @@ boost::system::error_code Client::stop()
 }
 
 
-// óMŠ®—¹
-// error : ƒGƒ‰[î•ñ
-// bytes_transferred : óM‚µ‚½ƒoƒCƒg”
+// ï¿½ï¿½Mï¿½ï¿½ï¿½ï¿½
+// error : ï¿½Gï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½
+// bytes_transferred : ï¿½ï¿½Mï¿½ï¿½ï¿½ï¿½ï¿½oï¿½Cï¿½gï¿½ï¿½
 void Client::on_receive(const boost::system::error_code& error, shared_ptr<vector<unsigned char>> buff, Recv_TCP_Func recv_func)
 {
 	Buffer recv_buf;
@@ -301,10 +301,10 @@ void Client::on_receive(const boost::system::error_code& error, shared_ptr<vecto
 }
 
 
-/* óMƒf[ƒ^‚ğó‚¯æ‚é(ó‚¯æ‚é‚Ü‚Å‘Ò‚Â)
-* buffer: óMƒf[ƒ^‚ğŠi”[‚·‚éƒoƒbƒtƒ@
-* size  : ó‚¯æ‚éƒTƒCƒY
-* –ß‚è’l : óM‚µ‚Ä‚¢‚½‚çtrue
+/* ï¿½ï¿½Mï¿½fï¿½[ï¿½^ï¿½ï¿½ï¿½ó‚¯ï¿½ï¿½(ï¿½ó‚¯ï¿½ï¿½Ü‚Å‘Ò‚ï¿½)
+* buffer: ï¿½ï¿½Mï¿½fï¿½[ï¿½^ï¿½ï¿½ï¿½iï¿½[ï¿½ï¿½ï¿½ï¿½oï¿½bï¿½tï¿½@
+* size  : ï¿½ó‚¯ï¿½ï¿½Tï¿½Cï¿½Y
+* ï¿½ß‚ï¿½l : ï¿½ï¿½Mï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½true
 */
 bool Client::read_nonblock(void * buffer, size_t size, boost::system::error_code * ec)
 {
@@ -322,7 +322,7 @@ bool Client::read_nonblock(void * buffer, size_t size, boost::system::error_code
 		return false;
 	}
 
-	//óM
+	//ï¿½ï¿½M
 	asio::read(socket_,
 		asio::buffer(buffer, size),
 		asio::transfer_all(),
@@ -331,19 +331,19 @@ bool Client::read_nonblock(void * buffer, size_t size, boost::system::error_code
 	if (ec)
 		*ec = errc;
 
-	if (errc) {	//óM¸”s
-		buffer = nullptr;	//óM¸”s‚Ìê‡‚Íƒkƒ‹ƒ|ƒCƒ“ƒ^‚É‚·‚é
-		return false;	//óM¸”s‚Ìê‡‚Ífalse‚ğ•Ô‚·
+	if (errc) {	//ï¿½ï¿½Mï¿½ï¿½ï¿½s
+		buffer = nullptr;	//ï¿½ï¿½Mï¿½ï¿½ï¿½sï¿½Ìê‡ï¿½Íƒkï¿½ï¿½ï¿½|ï¿½Cï¿½ï¿½ï¿½^ï¿½É‚ï¿½ï¿½ï¿½
+		return false;	//ï¿½ï¿½Mï¿½ï¿½ï¿½sï¿½Ìê‡ï¿½ï¿½falseï¿½ï¿½Ô‚ï¿½
 	}
 
 	return true;
 }
 
-/* óMƒf[ƒ^‚ğó‚¯æ‚é(ó‚¯æ‚é‚Ü‚Å‘Ò‚Â)
-* index : ‘ÎÛ‚ÌƒNƒ‰ƒCƒAƒ“ƒg
-* buffer: óMƒf[ƒ^‚ğŠi”[‚·‚éƒoƒbƒtƒ@
-* size  : ó‚¯æ‚éƒTƒCƒY
-* –ß‚è’l : ƒGƒ‰[ƒR[ƒh
+/* ï¿½ï¿½Mï¿½fï¿½[ï¿½^ï¿½ï¿½ï¿½ó‚¯ï¿½ï¿½(ï¿½ó‚¯ï¿½ï¿½Ü‚Å‘Ò‚ï¿½)
+* index : ï¿½ÎÛ‚ÌƒNï¿½ï¿½ï¿½Cï¿½Aï¿½ï¿½ï¿½g
+* buffer: ï¿½ï¿½Mï¿½fï¿½[ï¿½^ï¿½ï¿½ï¿½iï¿½[ï¿½ï¿½ï¿½ï¿½oï¿½bï¿½tï¿½@
+* size  : ï¿½ó‚¯ï¿½ï¿½Tï¿½Cï¿½Y
+* ï¿½ß‚ï¿½l : ï¿½Gï¿½ï¿½ï¿½[ï¿½Rï¿½[ï¿½h
 */
 boost::system::error_code Client::read(void* buffer, size_t size) {
 	if (!buffer)
@@ -359,7 +359,7 @@ boost::system::error_code Client::read(void* buffer, size_t size) {
 		asio::transfer_all(),
 		ec);
 
-	if (ec)	//óM¸”s‚Ìê‡‚Íƒkƒ‹ƒ|ƒCƒ“ƒ^‚É‚·‚é
+	if (ec)	//ï¿½ï¿½Mï¿½ï¿½ï¿½sï¿½Ìê‡ï¿½Íƒkï¿½ï¿½ï¿½|ï¿½Cï¿½ï¿½ï¿½^ï¿½É‚ï¿½ï¿½ï¿½
 		buffer = nullptr;
 
 	return ec;
@@ -367,7 +367,7 @@ boost::system::error_code Client::read(void* buffer, size_t size) {
 
 bool Client::is_open()
 {
-	//Ú‘±’†‚Å‚È‚¢‚±‚Æ‚àğŒ
+	//ï¿½Ú‘ï¿½ï¿½ï¿½ï¿½Å‚È‚ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½ï¿½ï¿½ï¿½ï¿½
 	return socket_.is_open() && !is_connecting;
 }
 
@@ -409,12 +409,12 @@ void Server::init(ushort port_no)
 	while (ec) {
 		cout << "Server Bind :" << ec.message() << endl;
 		if (ec != boost::asio::error::already_open || ec != boost::asio::error::address_in_use)
-			break;	//Šù‚ÉOpen‚Ìê‡ˆÈŠO‚Í’Pƒ‚É‰½‚©‚ÌƒGƒ‰[
-					//©•ª‚Å©•ª‚ÉÚ‘±‚µ‚Äƒ]ƒ“ƒr‚ğ‘ŞU
+			break;	//ï¿½ï¿½ï¿½ï¿½Openï¿½Ìê‡ï¿½ÈŠOï¿½Í’Pï¿½ï¿½ï¿½É‰ï¿½ï¿½ï¿½ï¿½ÌƒGï¿½ï¿½ï¿½[
+					//ï¿½ï¿½ï¿½ï¿½ï¿½Åï¿½ï¿½ï¿½ï¿½ÉÚ‘ï¿½ï¿½ï¿½ï¿½Äƒ]ï¿½ï¿½ï¿½rï¿½ï¿½ŞU
 		ec.clear();
 		Client* tmp_client = new Client();
 		tmp_client->connect(endp.address().to_string(), to_string(port_no));
-		delete tmp_client;	//‰ğ•ú
+		delete tmp_client;	//ï¿½ï¿½ï¿½
 		acceptor_.bind(endp, ec);
 	}
 }
@@ -450,7 +450,7 @@ int Server::start_accept(bool wait, Accept_Func accept_func)
 	return socket_.size() - 1;
 }
 
-// ‘—óMŠJn
+// ï¿½ï¿½ï¿½ï¿½Mï¿½Jï¿½n
 void Server::run()
 {
 	shared_ptr<asio::io_service::work> w(new asio::io_service::work(io_service_));
@@ -460,10 +460,10 @@ void Server::run()
 	io_service_.run();
 }
 
-// ‘—óM’â~
+// ï¿½ï¿½ï¿½ï¿½Mï¿½ï¿½~
 void Server::stop()
 {
-	//—áŠO”­¶—}§
+	//ï¿½ï¿½Oï¿½ï¿½ï¿½ï¿½ï¿½}ï¿½ï¿½
 	boost::system::error_code ec;
 	for (auto&& itr : socket_)
 		itr->cancel(ec);
@@ -471,7 +471,7 @@ void Server::stop()
 	worker.reset();
 }
 
-// ƒƒbƒZ[ƒW‘—M
+// ï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½Wï¿½ï¿½ï¿½M
 /*    void sendf(string str)
 {
 cout << "sendf" << endl;
@@ -484,9 +484,9 @@ asio::placeholders::error,
 asio::placeholders::bytes_transferred));
 }
 */
-// ‘—MŠ®—¹
-// error : ƒGƒ‰[î•ñ
-// bytes_transferred : ‘—M‚µ‚½ƒoƒCƒg”
+// ï¿½ï¿½ï¿½Mï¿½ï¿½ï¿½ï¿½
+// error : ï¿½Gï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½
+// bytes_transferred : ï¿½ï¿½ï¿½Mï¿½ï¿½ï¿½ï¿½ï¿½oï¿½Cï¿½gï¿½ï¿½
 void Server::on_send(const boost::system::error_code& error)
 {
 	if (error) {
@@ -508,9 +508,9 @@ void Server::close_accept() {
 	}
 }
 
-// ƒƒbƒZ[ƒW‘—M(’P‘Ì)
+// ï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½Wï¿½ï¿½ï¿½M(ï¿½Pï¿½ï¿½)
 
-//‘—Mƒoƒbƒtƒ@‚É’Ç‰Á(ƒJƒXƒ^ƒ€)
+//ï¿½ï¿½ï¿½Mï¿½oï¿½bï¿½tï¿½@ï¿½É’Ç‰ï¿½(ï¿½Jï¿½Xï¿½^ï¿½ï¿½)
 void Server::push_sendbuf(uint index, const void* data, size_t size) {
 	if (socket_.size() <= index)
 		return;
@@ -523,7 +523,7 @@ void Server::send(uint index) {
 	send_data_[index].clear();
 }
 
-// ƒƒbƒZ[ƒW‘—M
+// ï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½Wï¿½ï¿½ï¿½M
 void Server::send(uint index, const void* buffer, size_t size)
 {
 	if (socket_.size() <= index)
@@ -539,7 +539,7 @@ void Server::send(uint index, const void* buffer, size_t size)
 		));
 }
 
-// ƒƒbƒZ[ƒWóM(Å¬ƒTƒCƒYw’è)
+// ï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½Wï¿½ï¿½M(ï¿½Åï¿½ï¿½Tï¿½Cï¿½Yï¿½wï¿½ï¿½)
 void Server::start_receive(uint index, size_t size, Recv_TCP_Func recv_func)
 {
 	if (socket_.size() <= index)
@@ -562,9 +562,9 @@ void Server::start_receive(uint index, size_t size, Recv_TCP_Func recv_func)
 		));
 }
 
-// óMŠ®—¹
-// error : ƒGƒ‰[î•ñ
-// bytes_transferred : óM‚µ‚½ƒoƒCƒg”
+// ï¿½ï¿½Mï¿½ï¿½ï¿½ï¿½
+// error : ï¿½Gï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½
+// bytes_transferred : ï¿½ï¿½Mï¿½ï¿½ï¿½ï¿½ï¿½oï¿½Cï¿½gï¿½ï¿½
 void Server::on_receive(const boost::system::error_code& error, shared_ptr<vector<unsigned char>> buff, uint index, Recv_TCP_Func func)
 {
 	if (socket_.size() <= index)
@@ -600,7 +600,7 @@ bool Server::read_nonblock(uint index, void * buffer, size_t size, boost::system
 		return false;
 	}
 
-	//óM
+	//ï¿½ï¿½M
 	asio::read(*socket_[index],
 		asio::buffer(buffer, size),
 		asio::transfer_all(),
@@ -609,19 +609,19 @@ bool Server::read_nonblock(uint index, void * buffer, size_t size, boost::system
 	if (ec)
 		*ec = errc;
 
-	if (errc) {	//óM¸”s
-		buffer = nullptr;	//óM¸”s‚Ìê‡‚Íƒkƒ‹ƒ|ƒCƒ“ƒ^‚É‚·‚é
-		return false;	//óM¸”s‚Ìê‡‚Ífalse‚ğ•Ô‚·
+	if (errc) {	//ï¿½ï¿½Mï¿½ï¿½ï¿½s
+		buffer = nullptr;	//ï¿½ï¿½Mï¿½ï¿½ï¿½sï¿½Ìê‡ï¿½Íƒkï¿½ï¿½ï¿½|ï¿½Cï¿½ï¿½ï¿½^ï¿½É‚ï¿½ï¿½ï¿½
+		return false;	//ï¿½ï¿½Mï¿½ï¿½ï¿½sï¿½Ìê‡ï¿½ï¿½falseï¿½ï¿½Ô‚ï¿½
 	}
 
 	return true;
 }
 
-/* óMƒf[ƒ^‚ğó‚¯æ‚é(ó‚¯æ‚é‚Ü‚Å‘Ò‚Â)
-* index : ‘ÎÛ‚ÌƒNƒ‰ƒCƒAƒ“ƒg
-* buffer: óMƒf[ƒ^‚ğŠi”[‚·‚éƒoƒbƒtƒ@
-* size  : ó‚¯æ‚éƒTƒCƒY
-* –ß‚è’l : óMƒTƒCƒY(ƒGƒ‰[‚Í-1)
+/* ï¿½ï¿½Mï¿½fï¿½[ï¿½^ï¿½ï¿½ï¿½ó‚¯ï¿½ï¿½(ï¿½ó‚¯ï¿½ï¿½Ü‚Å‘Ò‚ï¿½)
+* index : ï¿½ÎÛ‚ÌƒNï¿½ï¿½ï¿½Cï¿½Aï¿½ï¿½ï¿½g
+* buffer: ï¿½ï¿½Mï¿½fï¿½[ï¿½^ï¿½ï¿½ï¿½iï¿½[ï¿½ï¿½ï¿½ï¿½oï¿½bï¿½tï¿½@
+* size  : ï¿½ó‚¯ï¿½ï¿½Tï¿½Cï¿½Y
+* ï¿½ß‚ï¿½l : ï¿½ï¿½Mï¿½Tï¿½Cï¿½Y(ï¿½Gï¿½ï¿½ï¿½[ï¿½ï¿½-1)
 */
 boost::system::error_code Server::read(uint index, void* buffer, size_t size) {
 	if (socket_.size() <= index)
@@ -638,7 +638,7 @@ boost::system::error_code Server::read(uint index, void* buffer, size_t size) {
 		ec
 	);
 
-	if (!ec)	//óM¸”s‚Ìê‡‚Íƒkƒ‹ƒ|ƒCƒ“ƒ^‚É‚·‚é
+	if (!ec)	//ï¿½ï¿½Mï¿½ï¿½ï¿½sï¿½Ìê‡ï¿½Íƒkï¿½ï¿½ï¿½|ï¿½Cï¿½ï¿½ï¿½^ï¿½É‚ï¿½ï¿½ï¿½
 		buffer = nullptr;
 
 	return ec;
@@ -668,16 +668,16 @@ void Server::on_accept(const boost::system::error_code& error, uint index, Accep
 void main_net_tcp_test()
 {
 	char c;
-	cout << "ƒNƒ‰ƒCƒAƒ“ƒgHƒT[ƒo[Hc/s\n>";
+	cout << "ï¿½Nï¿½ï¿½ï¿½Cï¿½Aï¿½ï¿½ï¿½gï¿½Hï¿½Tï¿½[ï¿½oï¿½[ï¿½Hc/s\n>";
 	cin >> c;
 	if (c == 'c')
 	{
 		char ch[15];
 		string server_name;
 		string port_no;
-		cout << "ƒT[ƒo–¼\n>";
+		cout << "ï¿½Tï¿½[ï¿½oï¿½ï¿½\n>";
 		cin >> server_name;
-		cout << "ƒ|[ƒg”Ô†\n>";
+		cout << "ï¿½|ï¿½[ï¿½gï¿½Ôï¿½\n>";
 		cin >> port_no;
 
 		Client client;
