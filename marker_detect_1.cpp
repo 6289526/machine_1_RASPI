@@ -14,7 +14,7 @@ using namespace std;
 using namespace cv;
 
 const int MAX_MARKER_NUM = 6; // 一度に読めるマーカーの数
-const double MARKER_SIZE = 61;  //マーカーの縦の長さをmmで指定
+const double MARKER_SIZE = 100;  //マーカーの縦の長さをmmで指定
 
 int readMatrix(const char* filename, cv::Mat& cameraMat, cv::Mat& distCoeffs);
 int CalibrationCamera(VideoCapture& cap, cv::Mat& cameraMat, cv::Mat& distCoeffs);
@@ -39,9 +39,6 @@ struct Send_Data{
 	int drone_angleY;
 	int drone_angleZ;
 };
-Send_Data send_data = {};
-
-Safe_Server server_tcp;
 
 int main(int argc, const char* argv[])
 {
@@ -66,11 +63,6 @@ int main(int argc, const char* argv[])
 
 	drone_image = cv::imread("drone.png", 1);
 	if (drone_image.data == NULL) return -1;
-
-	server_tcp.init(50200);
-	server_tcp.start_accept(false);
-
-	thread th_server([&] {server_tcp.run(); });
 
 	VideoCapture cap(0);  //カメラの映像の読み込み
     cap.set(3, 1280);
@@ -98,7 +90,6 @@ int main(int argc, const char* argv[])
 
 	while ((key = cv::waitKey(1)) != 'q') {  //qが押されるまで繰り返す
 
-		cout << server_tcp.is_open(0) << endl;
 		//背景画像の読み込み
 		dstImg = cv::imread("back.png", 1);
 		if (dstImg.data == NULL) return -1;
@@ -116,11 +107,15 @@ int main(int argc, const char* argv[])
 		if (image.empty())  //映像がないときはとばす 
 			continue;
 
-		if (key == 'c') {  //cが押されたときにキャリブレーションモードにする
-			CalibrationCamera(cap, cameraMatrix, distCoeffs);
+
+		switch (key) {
+			case 'c' : //cが押されたときにキャリブレーションモードにする
+				CalibrationCamera(cap, cameraMatrix, distCoeffs);
+				break;
+			case 'h' : // hで保存
+				imwrite("imgwww.png", image);
+				break;
 		}
-		if (key == 'h')  //hで保存
-		imwrite("imgwww.png", image);
 
 		//マーカーの検知
 		cv::aruco::detectMarkers(image, dictionary, marker_corners, marker_ids, parameters);
@@ -154,8 +149,7 @@ int main(int argc, const char* argv[])
 		}
 
 		//4つのマーカーのスクリーン座標系の中心の取得
-		int i = 0;
-		for (; i < marker_ids.size(); i++) {
+		for (int i = 0; i < marker_ids.size(); i++) {
 			switch (marker_ids[i])
 			{
 			case 42:
@@ -182,8 +176,8 @@ int main(int argc, const char* argv[])
 			average_center[1] = average_center[1] + all_marker_center[i][1];
 		}
 
-		average_center[0] = average_center[0] / i;  //x座標
-		average_center[1] = average_center[1] / i;  //y座標
+		average_center[0] = average_center[0] / marker_ids.size();  //x座標
+		average_center[1] = average_center[1] / marker_ids.size();  //y座標
 
 
         //カメラからARマーカーまでの距離を求める
@@ -228,13 +222,13 @@ int main(int argc, const char* argv[])
 				ave_angleY += angleY[i];
 				ave_angleZ += angleZ[i];
 
-					cv::Mat tmatrix = (cv::Mat_<double>(3, 1) << tvecs[i][0], tvecs[i][1], tvecs[i][2]);
-					cv::Mat distance = (cv::Mat_<double>(3, 1));
-					cv::Mat screen = (cv::Mat_<double>(3, 1) << marker_center[i][0], marker_center[i][1], 1);
+				cv::Mat tmatrix = (cv::Mat_<double>(3, 1) << tvecs[i][0], tvecs[i][1], tvecs[i][2]);
+				cv::Mat distance = (cv::Mat_<double>(3, 1));
+				cv::Mat screen = (cv::Mat_<double>(3, 1) << marker_center[i][0], marker_center[i][1], 1);
 
-					distanceX += tmatrix.at<double>(0, 0) * kx * MARKER_SIZE;
-					distanceY += tmatrix.at<double>(1, 0) * ky * MARKER_SIZE;
-					distanceZ += tmatrix.at<double>(2, 0) * kz * MARKER_SIZE;
+				distanceX += tmatrix.at<double>(0, 0) * kx * MARKER_SIZE;
+				distanceY += tmatrix.at<double>(1, 0) * ky * MARKER_SIZE;
+				distanceZ += tmatrix.at<double>(2, 0) * kz * MARKER_SIZE;
 			}
 
 
@@ -310,56 +304,18 @@ int main(int argc, const char* argv[])
 
 		cv::imshow("angle", backimage);
 
-        int drone_angle = 0;
-		int drone_angleX = 0;
-		int drone_angleY = 0;
-		int drone_angleZ = 0;
-		int drone_distanceX = 0;
-		int drone_distanceY = 0;
-		int drone_distanceZ = 0;
+		distanceX = 0;
+		distanceY = 0;
+		distanceZ = 0;
 
-        //操縦パソコンに送る値のケイサン
-		//地上機体との相対的な位置を計算する
-	    //サーボモーターを動かさない場合
-		drone_distanceX = distanceX;
-		drone_distanceY = distanceY;
-		drone_distanceZ = distanceZ;
-
-        drone_angleX = ave_angleX;
-		drone_angleY = ave_angleY;
-		drone_angleZ = ave_angleZ;
-
-		//操縦パソコンに送る値
-		send_data.drone_distanceX = drone_distanceX;
-		send_data.drone_distanceY = drone_distanceY;
-		send_data.drone_distanceZ = drone_distanceZ;
-        send_data.drone_angleX = drone_angleX;
-		send_data.drone_angleY = drone_angleY;
-		send_data.drone_angleZ = drone_angleZ;
-
-		if(server_tcp.is_open(0)){
-			server_tcp.send(0, send_data);
-
-			char dummy;
-			if(server_tcp.available(0) >= 1)
-		 		server_tcp.read(0, &dummy);
-		 }else{
-		 	ave_angleX = 0;
-		 	ave_angleY = 0;
-		 	ave_angleZ = 0;
-
-		 	distanceX = 0;
-		 	distanceY = 0;
-		 	distanceZ = 0;
-		 	distanceR = 0;
-		 }
+		ave_angleX = 0;
+		ave_angleY = 0;
+		ave_angleZ = 0;
 	}
+
 	cv::waitKey(0);
 
 	//Serial.close();
-	server_tcp.stop();
-	if(th_server.joinable())
-		th_server.join();
 
 	return 0;
 }

@@ -4,7 +4,7 @@
 all: marker_detect_1
 
 marker_detect_1: marker_detect_1.o serial.o network.o network_tcp.o network_udp.o Safe_Network_tcp.o
-	g++ marker_detect_1.o serial.o network.o network_tcp.o network_udp.o Safe_Network_tcp.o -o marker_detect_1
+	g++ marker_detect_1.o serial.o network.o network_tcp.o network_udp.o Safe_Network_tcp.o -o marker_detect_1  -lstdc++ -lpthread `pkg-config --cflags --libs opencv4`
 
 marker_detect_1.o: marker_detect_1.cpp
 	g++ -c marker_detect_1.cpp -lstdc++ -lpthread `pkg-config --cflags --libs opencv4`
