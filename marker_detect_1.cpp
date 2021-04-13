@@ -13,7 +13,7 @@
 using namespace std;
 using namespace cv;
 
-const int MAX_MARKER_NUM = 6; // 一度に読めるマーカーの数
+const int MAX_MARKER_NUM = 1; // 一度に読めるマーカーの数
 const double MARKER_SIZE = 100;  //マーカーの縦の長さをmmで指定
 
 int readMatrix(const char* filename, cv::Mat& cameraMat, cv::Mat& distCoeffs);
@@ -23,7 +23,6 @@ double kz = 3.1829046 / 3;  //実測値cmと、このパソコンの長さの調
 double kx = 2.06589452;
 double ky = kx;
 
-int count_frame = 0;
 float Servo_angle = 90;
 char Servo_angle_char[4] = "90";
 char value_Servo[200]; 
@@ -242,39 +241,8 @@ int main(int argc, const char* argv[])
 			ave_angleZ /= marker_ids.size();
 
 		}
-		 
-	    //サーボモーターを動かす角度を調べる
-		
-        if(marker_ids.size() > 0) {
-			if(count_frame % 30 == 0){
-			    
-                if(atan((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360 > 90){
-					Servo_angle += 180 - (atan((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360) ;
-				}else {
-					Servo_angle += atan((360 - average_center[1]) / (average_center[0] - 640)) / (3.14 * 2) * 360;
-				}
-				
-				if(Servo_angle >= 180){
-					Servo_angle -= 180;
-				}else if(Servo_angle <= 0){
-					Servo_angle += 180;
-				}
-				
-				sprintf(Servo_angle_char, "%.0f", Servo_angle); 
-			}
-		}
-		count_frame++;
-
-
-        
-		sprintf(value_Servo, "value=%.0f", Servo_angle); //変数の値も含めた表示したい文字列をchar型変数に格納
-
-		//真ん中に円を描画
-		circle(image, Point(average_center[0], average_center[1]), 10, Scalar(255, 0, 0), 3, 4);
 
 		flip(image, mirror_image, 1);
-
-    	putText(/*mirror_*/image, /*valuex_i*/Servo_angle_char, Point(50, 50), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 
 		//取得した値の表示
 
