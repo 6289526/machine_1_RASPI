@@ -3,6 +3,11 @@
         "thread": "cpp",
         "*.tcc": "cpp",
         "atomic": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "array": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp",
+        "utility": "cpp",
+        "chrono": "cpp"
     }
 }

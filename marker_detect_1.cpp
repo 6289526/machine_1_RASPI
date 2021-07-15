@@ -4,11 +4,13 @@
 #include <opencv2/aruco.hpp>
 #include <iostream>
 #include <iomanip>
-
+#include <wiringSerial.h>
+#include <wiringPi.h>
+#include <string>
 #include <thread>
 
-#include "serial.h"
-#include "Safe_Network_tcp.h"
+//#include "serial.h"
+//#include "Safe_Network_tcp.h"
 
 using namespace std;
 using namespace cv;
@@ -16,8 +18,58 @@ using namespace cv;
 const int MAX_MARKER_NUM = 1; // 一度に読めるマーカーの数
 const double MARKER_SIZE = 100;  //マーカーの縦の長さをmmで指定
 
+// 画面内に収まるマーカの範囲を指定
+const double MIN_X = -9.00;
+const double MAX_X = 50.8;
+const double MIN_Y = -16.0;
+const double MAX_Y = 54.4;
+
+const double CENTER_X = (MIN_X + MAX_X) / 2;
+const double CENTER_Y = (MIN_Y + MAX_Y) / 2;
+const double MAX_DIFF = 10; // 許容範囲
+
+const int MAX_MOTOR_POWER = 16; // 最大出力 正方向
+const int MIN_MOTOR_POWER = 10; // 最小出力　正方向
+
 int readMatrix(const char* filename, cv::Mat& cameraMat, cv::Mat& distCoeffs);
 int CalibrationCamera(VideoCapture& cap, cv::Mat& cameraMat, cv::Mat& distCoeffs);
+
+typedef enum RL{
+	RIGHT,
+	LEFT
+} RL;
+
+typedef enum Mode {
+	NORMAL, // 通常
+	SETTING_TURN_RIGHT_90, // 旋回設定
+	SETTING_TURN_LEFT_90,
+	MANUAL, // 手動
+	STRAIGHT, // 直進
+	TURN_RIGHT, // 旋回
+	TURN_LEFT, // 旋回
+	WAIT, // 待ち
+} Mode;
+
+typedef struct Motor_Power {
+	int Right_Motor;
+	int Left_Motor;
+} Moter_Power;
+
+int motor_L_Data[5] = {0, 0, 0, 0, 0};
+int motor_R_Data[5] = {0, 0, 0, 0, 0};
+int motor_count = 0;
+int motor_L_Sum = 0;
+int motor_R_Sum = 0;
+
+void moter_average_5(int R, int L);
+int Map(int value, float min_a, float max_a, float min_b, float max_b);
+void motor_map();
+void Positioning_X(double now_x); // 位置調整
+void Positioning_Y(double now_y); // 位置調整
+void Send_Data(int fd); // 送信関数
+double Target_Angle(RL rl, double now_angle, int angle); // 目標角度取得関数
+void Turn(RL rl, double now_angle, double target_angle); // 旋回関数
+void Straight(); // 直進関数
 
 double kz = 3.1829046 / 3;  //実測値cmと、このパソコンの長さの調整係数
 double kx = 2.06589452;
@@ -39,9 +91,12 @@ struct Send_Data{
 	int drone_angleZ;
 };
 
+int mode = NORMAL;
+Moter_Power motor = {0, 0};
+bool first_flag = true;
+
 int main(int argc, const char* argv[])
 {
-	
 	cv::Mat drone_image;
 	//背景画像
 	cv::Mat dstImg;
@@ -64,12 +119,13 @@ int main(int argc, const char* argv[])
 	if (drone_image.data == NULL) return -1;
 
 	VideoCapture cap(0);  //カメラの映像の読み込み
-    cap.set(3, 1280);
-	cap.set(4, 720);
+    cap.set(3, 800); // 横
+	cap.set(4, 800); // 縦
 
 	Mat mirror_image;  //表示画面の左右反転の用意
 
 	int key = 0;
+	double t_angle; // 目標角度
 
 	double angleX[MAX_MARKER_NUM];
 	double angleY[MAX_MARKER_NUM];
@@ -77,6 +133,7 @@ int main(int argc, const char* argv[])
 	for (int i = 0; i < MAX_MARKER_NUM; ++i) {
 		angleX[i] = angleY[i] = angleZ[i] = 0.0;
 	}
+
 
 	double ave_angleX = 0;
 	double ave_angleY = 0;
@@ -87,9 +144,25 @@ int main(int argc, const char* argv[])
 	double distanceZ = 0;
 	double distanceR = 0;
 
-	while ((key = cv::waitKey(1)) != 'q') {  //qが押されるまで繰り返す
+	/* シリアルポートオープン */
+	int fd = serialOpen("/dev/serial0", 57600);
+	if(fd<0){
+		printf("can not open serialport\n");
+	}
+	else {
+		printf("open serialport\n");
+	}
+	wiringPiSetup();
+	fflush(stdout);
 
-		//背景画像の読み込み
+	//中心等の座標の取得
+	float marker_location[MAX_MARKER_NUM][8] = {};
+	float marker_center[MAX_MARKER_NUM][2] = {};
+	float all_marker_center[MAX_MARKER_NUM][2] = {};
+	float average_center[2] = {};
+
+	while (((key = cv::waitKey(1)) != 'q')) {  //qが押されるまで繰り返す
+	
 		dstImg = cv::imread("back.png", 1);
 		if (dstImg.data == NULL) return -1;
 
@@ -106,31 +179,31 @@ int main(int argc, const char* argv[])
 		if (image.empty())  //映像がないときはとばす 
 			continue;
 
-
-		switch (key) {
-			case 'c' : //cが押されたときにキャリブレーションモードにする
-				CalibrationCamera(cap, cameraMatrix, distCoeffs);
-				break;
-			case 'h' : // hで保存
-				imwrite("imgwww.png", image);
-				break;
-		}
-
 		//マーカーの検知
 		cv::aruco::detectMarkers(image, dictionary, marker_corners, marker_ids, parameters);
 		//マーカーの描画
 		cv::aruco::drawDetectedMarkers(image, marker_corners, marker_ids);
 
-
-		//中心等の座標の取得
-		float marker_location[MAX_MARKER_NUM][8] = {};
-		float marker_center[MAX_MARKER_NUM][2] = {};
-		float all_marker_center[MAX_MARKER_NUM][2] = {};
-		float average_center[2] = {};
-
 		if (MAX_MARKER_NUM < marker_ids.size()) {
 			std::cout << "マーカーが多すぎる　：　" << marker_ids.size() << " 枚\n";
 			continue;
+		}
+
+		// マーカなしならモードリセット
+		if (marker_ids.size() == 0) {
+			mode = NORMAL;
+			motor.Right_Motor = 0;
+			motor.Left_Motor = 0;
+
+			if (first_flag) {
+				motor.Right_Motor = 0;
+				motor.Left_Motor = 0;
+				Send_Data(fd); // 送信
+				first_flag = false;
+			}
+		}
+		else {
+			first_flag = true;
 		}
 
         //それぞれのマーカーの中心のスクリーン座標系を取得
@@ -154,11 +227,21 @@ int main(int argc, const char* argv[])
 			case 42:
 				all_marker_center[i][0] = marker_location[i][4] + 0.6071 * (marker_location[i][4] - marker_center[i][0]);
 				all_marker_center[i][1] = marker_location[i][5] + 0.5 * (marker_location[i][5] - marker_center[i][1]);
+
+				if (mode == NORMAL) {
+					mode = SETTING_TURN_RIGHT_90;
+				}
+
 				break;
 
 			case 18:
 				all_marker_center[i][0] = marker_location[i][6] - 0.6071 * (marker_center[i][0] - marker_location[i][6]);
 				all_marker_center[i][1] = marker_location[i][7] + 0.5 * (marker_location[i][7] - marker_center[i][1]);
+
+				if (mode == NORMAL) {
+					mode = SETTING_TURN_LEFT_90;
+				}
+
 				break;
 
 			case 43:
@@ -201,7 +284,7 @@ int main(int argc, const char* argv[])
 			cv::aruco::estimatePoseSingleMarkers(marker_corners, MARKER_SIZE * 0.001, cameraMatrix, distCoeffs, rvecs, tvecs);
 			for (int i = 0; i < marker_ids.size(); i++)
 			{
-				cv::aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 0.1);
+				//cv::aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 0.1);
 				
 				//3*1行列から3*3行列に戻す
 				Rodrigues(rvecs[i], rmatrix);
@@ -225,9 +308,10 @@ int main(int argc, const char* argv[])
 				cv::Mat distance = (cv::Mat_<double>(3, 1));
 				cv::Mat screen = (cv::Mat_<double>(3, 1) << marker_center[i][0], marker_center[i][1], 1);
 
-				distanceX += tmatrix.at<double>(0, 0) * kx * MARKER_SIZE;
-				distanceY += tmatrix.at<double>(1, 0) * ky * MARKER_SIZE;
+				distanceY += tmatrix.at<double>(0, 0) * kx * MARKER_SIZE;
+				distanceX += tmatrix.at<double>(1, 0) * ky * MARKER_SIZE;
 				distanceZ += tmatrix.at<double>(2, 0) * kz * MARKER_SIZE;
+
 			}
 
 
@@ -240,6 +324,12 @@ int main(int argc, const char* argv[])
 			ave_angleY /= marker_ids.size();
 			ave_angleZ /= marker_ids.size();
 
+			// printf("%c\n" , serialGetchar(fd) );
+			// fflush(stdin);
+
+			for(int i=0; i<marker_ids.size(); i++){
+				marker_ids[i] = 0;
+			}
 		}
 
 		flip(image, mirror_image, 1);
@@ -248,7 +338,9 @@ int main(int argc, const char* argv[])
 
 		cv::imshow("out(Mirror)", /*mirror_*/image);  
 
+		/*
 		cv::namedWindow("angle", cv::WINDOW_AUTOSIZE);
+		
 		
 		char value_x[100];
 		char value_y[100];
@@ -259,7 +351,7 @@ int main(int argc, const char* argv[])
 		putText(backimage, value_x, Point(50, 100), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 		putText(backimage, value_y, Point(50, 150), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 		putText(backimage, value_z, Point(50, 200), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
-
+		
 		char value2_x[100];
 		char value2_y[100];
 		char value2_z[100];
@@ -269,8 +361,39 @@ int main(int argc, const char* argv[])
 		putText(backimage, value2_x, Point(50, 250), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 		putText(backimage, value2_y, Point(50, 300), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
 		putText(backimage, value2_z, Point(50, 350), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+		
 
 		cv::imshow("angle", backimage);
+		*/
+
+		switch (mode) {
+			case NORMAL:
+				break;
+			case SETTING_TURN_RIGHT_90:
+				t_angle = Target_Angle(RIGHT, ave_angleZ, 90); // 右回転90度旋回設定
+				mode = TURN_RIGHT;
+				break;
+			case SETTING_TURN_LEFT_90:
+				t_angle = Target_Angle(LEFT, ave_angleZ, 90); // 左回転90度旋回設定
+				mode = TURN_LEFT;
+				break;
+			case MANUAL:
+				break;
+			case STRAIGHT:
+				break;
+			case TURN_RIGHT:
+				//Turn(RIGHT, ave_angleZ, t_angle); // 設定された右回転
+				Positioning_Y(distanceY);
+				Send_Data(fd); // 送信
+				break;
+			case TURN_LEFT:
+				//Turn(LEFT, ave_angleZ, t_angle); // 設定された左回転
+				Positioning_Y(distanceY);
+				Send_Data(fd); // 送信
+				break;
+			case WAIT:
+				break;
+		}
 
 		distanceX = 0;
 		distanceY = 0;
@@ -287,6 +410,57 @@ int main(int argc, const char* argv[])
 
 	return 0;
 }
+
+void motor_average_5(int R, int L) {
+	if (5 <= motor_count) {
+		motor_count = 0;
+	}
+
+	// 正回転補正
+	if (0 < motor.Right_Motor) {
+		R += 4;
+	}
+	if (0 < motor.Left_Motor) {
+		L += 4;
+	}
+
+	motor_L_Sum -= motor_L_Data[motor_count];
+	motor_R_Sum -= motor_R_Data[motor_count];
+	motor_L_Data[motor_count] = L;
+	motor_R_Data[motor_count] = R;
+	motor_L_Sum += motor_L_Data[motor_count];
+	motor_R_Sum += motor_R_Data[motor_count];
+	++motor_count;	
+
+	motor.Right_Motor = motor_R_Sum / 5;
+	motor.Left_Motor = motor_L_Sum / 5;
+}
+
+
+int Map(int value, float min_a, float max_a, float min_b, float max_b) {
+	float ret = (value - min_a) / (max_a - min_a);
+	ret *= (max_b - min_b);
+	ret += min_b;
+
+	return ret;
+}
+
+void motor_map() {
+	if (0 < motor.Left_Motor)  {
+		motor.Left_Motor = Map(motor.Left_Motor, 0, MAX_MOTOR_POWER, MIN_MOTOR_POWER, MAX_MOTOR_POWER);
+	}
+	else if (motor.Left_Motor < 0) {
+		motor.Left_Motor = Map(motor.Left_Motor, -MAX_MOTOR_POWER, 0, -MAX_MOTOR_POWER, -MIN_MOTOR_POWER);
+	}
+
+	if (0 < motor.Right_Motor) {
+		motor.Right_Motor = Map(motor.Right_Motor, 0, MAX_MOTOR_POWER, MIN_MOTOR_POWER, MAX_MOTOR_POWER);
+	}
+	else if (motor.Right_Motor < 0) {
+		motor.Right_Motor = Map(motor.Right_Motor, -MAX_MOTOR_POWER, 0, -MAX_MOTOR_POWER, -MIN_MOTOR_POWER);
+	}
+}
+
 
 int readMatrix(const char* filename, cv::Mat& cameraMat, cv::Mat& distCoeffs) {
 	try{
@@ -307,121 +481,129 @@ int readMatrix(const char* filename, cv::Mat& cameraMat, cv::Mat& distCoeffs) {
 	return 0;
 }
 
-int CalibrationCamera(VideoCapture& cap, cv::Mat& cameraMat, cv::Mat& distCoeff) {
+// 位置調整
+void Positioning_X(double now_x) {
+	double diff_x = now_x - CENTER_X;
 
-	//std::cout << "Hello World!\n"; 
-	const int BOARD_W = 10;  //チェスボードの横方向コーナーの数
-	const int BOARD_H = 7;  //チェスボードの縦方向コーナーの数
-	const Size BOARD_SIZE = Size(BOARD_W, BOARD_H);
-	const int N_CORNERS = BOARD_W * BOARD_H;
-	int N_BOARDS = 0;  //チェスボードの撮影枚数
-	const float SCALE = 24;   //チェスボードの正方形の辺の長さ(mm)
-	Size IM_SIZE;// = Size(512, 384); //撮影写真のピクセル数
-	double rms;
-	Mat src_image;
+	motor.Right_Motor = 0;
+	motor.Left_Motor = 0;
 
-	if (!cap.isOpened())
-		return -1;
-
-	IM_SIZE.width = (int)cap.get(cv::CAP_PROP_FRAME_WIDTH);
-	IM_SIZE.height = (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-
-	Mat cameraMatrix;
-	Mat distCoeffs;
-	vector<Mat> rvecs;
-	vector<Mat> tvecs;
-
-	Mat dst_image;
-	Mat mirror_image;
-	while (cv::waitKey(1) != 'q') {  //qを押すまでキャリブレーションモード
-		cap >> src_image;  //画像の読み込み
-
-		if (src_image.empty())
-			continue;
-
-		//左右反転画像の表示
-		flip(src_image, mirror_image, 1);
-		imshow("Source(Mirror)", mirror_image);  
-
-		//ーーーimagePointsの取得ーーー
-		vector<vector<Point2f>>imagePoints;
-		vector<Point2f> imageCorners; //このvectorがimagePoints
-		Mat gray_image;
-		bool found;
-		Mat dst_image;
-		//ーーーコーナーの検出ーーー
-		found = findChessboardCorners(src_image, BOARD_SIZE, imageCorners);
-
-		if (!found)  //コーナーがないときとばす
-			continue;
-
-		//ーーー制度を高めるーーー
-		cvtColor(src_image, gray_image, cv::COLOR_BGR2GRAY);
-		cornerSubPix(gray_image, imageCorners, Size(9, 9), Size(-1, -1), TermCriteria(cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS, 30, 0.1));
-		////ーーーコーナーを描画するーーー
-		dst_image = src_image.clone();
-		drawChessboardCorners(dst_image, BOARD_SIZE, imageCorners, found);
-		////ーーーコーナーを表示するーーー
-		//namedWindow("コーナー検出画像　" + to_string(i));
-		//imshow("コーナー検出画像　" + to_string(i), dst_image);
-		////ーーーコーナーの座標を確認するーーー
-		//for (int i = 0; i < N_CORNERS; i++)
-		//	cout << i << "  " << (int)(imageCorners[i].x + 0.5) << "  " << (int)(imageCorners[i].y + 0.5) << endl;
-		////ーーーimagePointsに書き込むーーー
-		imagePoints.push_back(imageCorners);
-
-		N_BOARDS++;
-
-		//ーーーobjectPointsの設定ーーー
-		vector<vector<Point3f>> objectPoints;
-		vector<Point3f>objectCorners; //このvectorがobjectPoints
-		for (int j = 0; j < BOARD_H; j++)
-			for (int i = 0; i < BOARD_W; i++)
-			{
-				objectCorners.push_back(Point3f(i*SCALE, j*SCALE, 0.0f));
-			}
-		objectPoints.push_back(objectCorners);
-		//ーーーカメラキャリブレーションを行うーーー
-		rms = calibrateCamera(objectPoints, imagePoints, Size(IM_SIZE.width, IM_SIZE.height), cameraMatrix, distCoeffs, rvecs, tvecs);
+	// x方向のズレ補正
+	if (MAX_DIFF < abs(diff_x)) {
+		// 中心より左に位置している場合
+		if (diff_x < 0) {
+			// 右に動かす
+			motor.Left_Motor = int(MAX_MOTOR_POWER * abs(diff_x) / (CENTER_X - MIN_X));
+		}
+		// 中心より右に位置している場合
+		else if (0 < diff_x) {
+			// 左に動かす
+			motor.Right_Motor = int(MAX_MOTOR_POWER * abs(diff_x) / (MAX_X - CENTER_X));
+		}
 	}
-	if (cameraMatrix.empty())  //cameraMatrixがないときエラー
-		return -1;
+}
 
-	//ーーーキャリブレーションの結果ーーー
-	cout << fixed << right;
-	cout << "Re_projection Error(unit: pixel)" << endl;
-	cout << "  " << rms << endl;
-	cout << endl;
-	cout << "CameraMatrix(unit: pixel)" << endl;
-	cout << "  fx=" << cameraMatrix.at<float>(0, 0);
-	cout << "  fy=" << cameraMatrix.at<float>(1, 1);
-	cout << "  cx=" << cameraMatrix.at<float>(0, 2);
-	cout << "  cy=" << cameraMatrix.at<float>(1, 2);
-	cout << endl << endl;
-	cout << "distCoeffs" << endl;
-	cout << "  k1=" << distCoeffs.at<float>(0, 0);
-	cout << "  k2=" << distCoeffs.at<float>(0, 1);
-	cout << "  p1=" << distCoeffs.at<float>(0, 2);
-	cout << "  p2=" << distCoeffs.at<float>(0, 3);
-	cout << "  p3=" << distCoeffs.at<float>(0, 4);
-	cout << endl << endl;
-	//ーーーキャリブレーション結果を格納するーーー
-	FileStorage fs("caliburation.xml", FileStorage::WRITE);
-	fs << "cameraMatrix" << cameraMatrix;
-	fs << "distCoeffs" << distCoeffs;
-	fs.release();
+// 位置調整
+void Positioning_Y(double now_y) {
+	double diff_y = CENTER_Y - now_y;
 
-	//ーーー画像を補正するーーー
-	undistort(src_image, dst_image, cameraMatrix, distCoeffs);
-	namedWindow("補正画像");
-	imshow("補正画像", dst_image);
+	motor.Right_Motor = 0;
+	motor.Left_Motor = 0;
 
-	waitKey(0);
-	destroyAllWindows();
+	// y方向のズレ補正
+	if (MAX_DIFF < abs(diff_y)) {
+		// 中心より後ろに位置している場合
+		if (diff_y < 0) {
+			// 前に動かす
+			motor.Left_Motor += int(MAX_MOTOR_POWER * abs(diff_y) / (CENTER_Y - MIN_Y));
+			motor.Right_Motor += int(MAX_MOTOR_POWER * abs(diff_y) / (CENTER_Y - MIN_Y));
+		}
+		// 中心より前に位置している場合
+		else if (0 < diff_y) {
+			// 後ろに動かす
+			motor.Left_Motor -= int(MAX_MOTOR_POWER * abs(diff_y) / (MAX_Y - CENTER_Y));
+			motor.Right_Motor -= int(MAX_MOTOR_POWER * abs(diff_y) / (MAX_Y - CENTER_Y));
+		}
+	}
 
-	//カメラキャリブレーション値の更新
-	cameraMat = cameraMatrix;
-	distCoeff = distCoeffs;
+	// 異常値を弾く
+	if (motor.Right_Motor < -MAX_MOTOR_POWER  || motor.Left_Motor < -MAX_MOTOR_POWER) {
+		motor.Right_Motor = 0;
+		motor.Left_Motor = 0;
+	}
+	else if (MAX_MOTOR_POWER < motor.Right_Motor || MAX_MOTOR_POWER < motor.Left_Motor) {
+		motor.Right_Motor = 0;
+		motor.Left_Motor = 0;
+	}
 
-	return 0;
+	motor_map(); // 最小値を設定
+
+	motor_average_5(motor.Right_Motor, motor.Left_Motor);
+}
+
+
+// 送信関数
+void Send_Data(int fd) {
+	/* 送信処理 */
+	serialPutchar(fd,'H');
+
+	unsigned char power = motor.Right_Motor + 100; // 0 ~ 200に補正
+	serialPutchar(fd, power); 
+	printf("%d ", power - 100);
+
+
+	power = motor.Left_Motor + 100;
+	serialPutchar(fd, power);
+	printf("%d", power - 100);
+
+	printf(" send \n");
+} 
+
+double Target_Angle(RL rl, double now_angle, int angle) {
+	double target_angle; // 目標角度
+
+	if (rl == RIGHT) {
+		angle *= -1;
+	}
+
+	target_angle = now_angle + angle;
+
+	if (target_angle < -180) {
+		target_angle += 360;
+	}
+	else if (180 < target_angle) {
+		target_angle -= 360;
+	}
+
+	return target_angle;
+}
+
+
+// 旋回関数
+void Turn(RL rl, double now_angle, double target_angle) {
+	int diff = target_angle - now_angle; // 目標までの差
+
+	// 誤差10度まで許容
+	if (diff < -10 || 10 < diff) {
+		diff = target_angle - now_angle;
+		cout << "あと  "  << diff << endl; 
+
+		if (rl == RIGHT) {
+			motor.Right_Motor = -15;
+			motor.Left_Motor = 15;
+		}
+		else if (rl == LEFT) {
+			motor.Right_Motor = 15;
+			motor.Left_Motor = -15;
+		}
+	}
+	else {
+		cout << "終了" << endl;
+		mode = WAIT;
+	}
+}
+
+// 直進関数
+void Straight() {
+
 }
