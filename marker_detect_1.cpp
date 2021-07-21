@@ -9,6 +9,8 @@
 #include <string>
 #include <thread>
 #include <ctime>
+#include <fstream>
+#include <sstream>
 
 //#include "serial.h"
 //#include "Safe_Network_tcp.h"
@@ -20,29 +22,29 @@ const int MAX_MARKER_NUM = 1; // 一度に読めるマーカーの数
 const double MARKER_SIZE = 100;  //マーカーの縦の長さをmmで指定
 
 // 画面内に収まるマーカの範囲を指定
-const double MIN_X = -21.5;
-const double MAX_X = 100.0;
-const double MIN_Y = 15.0;
-const double MAX_Y = 89.0;
+double CAMERA_AREA_X_MIN = 0.0;
+double CAMERA_AREA_X_MAX = 0.0;
+double CAMERA_AREA_Y_MIN = 0.0;
+double CAMERA_AREA_Y_MAX = 0.0;
 
-const int ADJUST_FR = -2;
-const int ADJUST_FL = -4;
-const int ADJUST_BR = 2;
-const int ADJUST_BL = 4;
+int ADJUST_FR = 0;
+int ADJUST_FL = 0;
+int ADJUST_BR = 0;
+int ADJUST_BL = 0;
 
-const double MAX_DIFF = 15; // 許容範囲
+double MAX_DIFF = 0; // 許容範囲
 
-const int MAX_MOTOR_POWER = 19; // 最大出力 正方向　縦移動時
-const int MIN_MOTOR_POWER = 17; // 最小出力　正方向　縦移動時
+int MAX_MOTOR_POWER = 0; // 最大出力 正方向　縦移動時
+int MIN_MOTOR_POWER = 0; // 最小出力　正方向　縦移動時
 
-const int MAX_SIDE_MOTOR_POWER = 35; // 最大出力 正方向　横移動時
-const int MIN_SIDE_MOTOR_POWER = 30; // 最小出力　正方向　横移動時
+int MAX_SIDE_MOTOR_POWER = 0; // 最大出力 正方向　横移動時
+int MIN_SIDE_MOTOR_POWER = 0; // 最小出力　正方向　横移動時
 
-const int MAX_TURN_MOTOR_POWER = 45; // 最大出力　正方向　旋回時
-const int MIN_TURN_MOTOR_POWER = 35; // 最小出力　正方向　旋回時
+int MAX_TURN_MOTOR_POWER = 0; // 最大出力　正方向　旋回時
+int MIN_TURN_MOTOR_POWER = 0; // 最小出力　正方向　旋回時
 
-const double CENTER_X = (MIN_X + MAX_X) / 2;
-const double CENTER_Y = (MIN_Y + MAX_Y) / 2;
+double CENTER_X = 0;
+double CENTER_Y = 0;
 
 int readMatrix(const char* filename, cv::Mat& cameraMat, cv::Mat& distCoeffs);
 int CalibrationCamera(VideoCapture& cap, cv::Mat& cameraMat, cv::Mat& distCoeffs);
@@ -111,6 +113,7 @@ bool GoStraight(int marker_num); // 直進関数
 bool GoRight(int marker_num); // 右直進関数
 bool GoLeft(int marker_num); // 左直進関数
 bool GoBack(int marker_num); // 後直進関数
+void csv_load_init(char filename[]);
 
 double kz = 3.1829046 / 3;  //実測値cmと、このパソコンの長さの調整係数
 double kx = 2.06589452;
@@ -141,6 +144,8 @@ time_t n_time = 0;
 
 int main(int argc, const char* argv[])
 {
+	csv_load_init("config.csv");
+
 	cv::Mat drone_image;
 	//背景画像
 	cv::Mat dstImg;
@@ -667,19 +672,19 @@ bool Positioning_X(double now_x) {
 		// 中心より右に位置している場合
 		if (diff_x < 0) {
 			// 左に動かす
-			motor.Front_Right_Motor -= int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CENTER_X - MIN_X));
-			motor.Front_Left_Motor  += int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CENTER_X - MIN_X));
-			motor.Back_Right_Motor += int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CENTER_X - MIN_X));
-			motor.Back_Left_Motor  -= int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CENTER_X - MIN_X));
+			motor.Front_Right_Motor -= int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CENTER_X - CAMERA_AREA_X_MIN));
+			motor.Front_Left_Motor  += int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CENTER_X - CAMERA_AREA_X_MIN));
+			motor.Back_Right_Motor += int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CENTER_X - CAMERA_AREA_X_MIN));
+			motor.Back_Left_Motor  -= int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CENTER_X - CAMERA_AREA_X_MIN));
 		
 		}
 		// 中心より左に位置している場合
 		else if (0 < diff_x) {
 			// 右に動かす
-			motor.Front_Right_Motor  += int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (MAX_X - CENTER_X));
-			motor.Front_Left_Motor -= int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (MAX_X - CENTER_X));
-			motor.Back_Right_Motor  -= int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (MAX_X - CENTER_X));
-			motor.Back_Left_Motor += int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (MAX_X - CENTER_X));
+			motor.Front_Right_Motor  += int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CAMERA_AREA_X_MAX - CENTER_X));
+			motor.Front_Left_Motor -= int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CAMERA_AREA_X_MAX - CENTER_X));
+			motor.Back_Right_Motor  -= int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CAMERA_AREA_X_MAX - CENTER_X));
+			motor.Back_Left_Motor += int(MAX_SIDE_MOTOR_POWER * abs(diff_x) / (CAMERA_AREA_X_MAX - CENTER_X));
 		}
 	}
 
@@ -716,18 +721,18 @@ bool Positioning_Y(double now_y) {
 		// 中心より後ろに位置している場合
 		if (diff_y < 0) {
 			// 前に動かす
-			motor.Front_Left_Motor += int(MAX_MOTOR_POWER * abs(diff_y) / (CENTER_Y - MIN_Y));
-			motor.Back_Left_Motor += int(MAX_MOTOR_POWER * abs(diff_y) / (CENTER_Y - MIN_Y));
-			motor.Front_Right_Motor += int(MAX_MOTOR_POWER * abs(diff_y) / (CENTER_Y - MIN_Y));
-			motor.Back_Right_Motor += int(MAX_MOTOR_POWER * abs(diff_y) / (CENTER_Y - MIN_Y));
+			motor.Front_Left_Motor += int(MAX_MOTOR_POWER * abs(diff_y) / (CENTER_Y - CAMERA_AREA_Y_MIN));
+			motor.Back_Left_Motor += int(MAX_MOTOR_POWER * abs(diff_y) / (CENTER_Y - CAMERA_AREA_Y_MIN));
+			motor.Front_Right_Motor += int(MAX_MOTOR_POWER * abs(diff_y) / (CENTER_Y - CAMERA_AREA_Y_MIN));
+			motor.Back_Right_Motor += int(MAX_MOTOR_POWER * abs(diff_y) / (CENTER_Y - CAMERA_AREA_Y_MIN));
 		}
 		// 中心より前に位置している場合
 		else if (0 < diff_y) {
 			// 後ろに動かす
-			motor.Front_Left_Motor -= int(MAX_MOTOR_POWER * abs(diff_y) / (MAX_Y - CENTER_Y));
-			motor.Back_Left_Motor -= int(MAX_MOTOR_POWER * abs(diff_y) / (MAX_Y - CENTER_Y));
-			motor.Front_Right_Motor -= int(MAX_MOTOR_POWER * abs(diff_y) / (MAX_Y - CENTER_Y));
-			motor.Back_Right_Motor -= int(MAX_MOTOR_POWER * abs(diff_y) / (MAX_Y - CENTER_Y));
+			motor.Front_Left_Motor -= int(MAX_MOTOR_POWER * abs(diff_y) / (CAMERA_AREA_Y_MAX - CENTER_Y));
+			motor.Back_Left_Motor -= int(MAX_MOTOR_POWER * abs(diff_y) / (CAMERA_AREA_Y_MAX - CENTER_Y));
+			motor.Front_Right_Motor -= int(MAX_MOTOR_POWER * abs(diff_y) / (CAMERA_AREA_Y_MAX - CENTER_Y));
+			motor.Back_Right_Motor -= int(MAX_MOTOR_POWER * abs(diff_y) / (CAMERA_AREA_Y_MAX - CENTER_Y));
 		}
 	}
 
@@ -905,4 +910,75 @@ bool GoBack(int marker_num) {
 	}
 
 	return true;
+}
+
+void csv_load_init(char filename[]) {
+	std::string str_buf;
+	std::string str_conma_buf;
+
+	std::ifstream ifs_csv_file(filename); // ファイルを開く
+	
+	// 行を読み取り
+	while (getline(ifs_csv_file, str_buf)) {
+		// 「,」区切り
+		std::istringstream i_stream(str_buf);
+
+		getline(i_stream, str_conma_buf, ',');
+		if (str_conma_buf == "CAMERA_AREA_X") {
+			getline(i_stream, str_conma_buf, ',');
+			CAMERA_AREA_X_MIN = std::stod(str_conma_buf);
+			getline(i_stream, str_conma_buf, '\n');
+			CAMERA_AREA_X_MAX = std::stod(str_conma_buf);
+			CENTER_X = (CAMERA_AREA_X_MIN + CAMERA_AREA_X_MAX) / 2;
+		}
+		else if (str_conma_buf == "CAMERA_AREA_Y") {
+			getline(i_stream, str_conma_buf, ',');
+			CAMERA_AREA_Y_MIN = std::stod(str_conma_buf);
+			getline(i_stream, str_conma_buf, '\n');
+			CAMERA_AREA_Y_MAX = std::stod(str_conma_buf);
+			CENTER_Y = (CAMERA_AREA_Y_MIN + CAMERA_AREA_Y_MAX) / 2;
+		}
+		else if (str_conma_buf == "ADJUST") {
+			getline(i_stream, str_conma_buf, ',');
+			ADJUST_FR = std::stoi(str_conma_buf);
+			getline(i_stream, str_conma_buf, ',');
+			ADJUST_FL = std::stoi(str_conma_buf);
+			getline(i_stream, str_conma_buf, ',');
+			ADJUST_BR = std::stoi(str_conma_buf);
+			getline(i_stream, str_conma_buf, '\n');
+			ADJUST_BL = std::stoi(str_conma_buf);
+		}
+		else if (str_conma_buf == "DISTANCE_DIF") {
+			getline(i_stream, str_conma_buf, '\n');
+			MAX_DIFF = std::stoi(str_conma_buf);
+		}
+		else if (str_conma_buf == "STRAIGHT_POWER") {
+			getline(i_stream, str_conma_buf, ',');
+			MIN_MOTOR_POWER = std::stoi(str_conma_buf);
+			getline(i_stream, str_conma_buf, '\n');
+			MAX_MOTOR_POWER = std::stoi(str_conma_buf);
+		}
+		else if (str_conma_buf == "SIDE_POWER") {
+			getline(i_stream, str_conma_buf, ',');
+			MIN_SIDE_MOTOR_POWER = std::stoi(str_conma_buf);
+			getline(i_stream, str_conma_buf, '\n');
+			MAX_SIDE_MOTOR_POWER = std::stoi(str_conma_buf);
+		}
+		else if (str_conma_buf == "TURN_POWER") {
+			getline(i_stream, str_conma_buf, ',');
+			MIN_TURN_MOTOR_POWER = std::stoi(str_conma_buf);
+			getline(i_stream, str_conma_buf, '\n');
+			MAX_TURN_MOTOR_POWER = std::stoi(str_conma_buf);
+		}
+	}
+
+	cout << CAMERA_AREA_X_MIN << " " << CAMERA_AREA_X_MAX << endl;
+	cout << CAMERA_AREA_Y_MIN << " " << CAMERA_AREA_Y_MAX << endl;
+	cout << CENTER_X << " " << CENTER_Y << endl;
+	cout << ADJUST_FR << " " << ADJUST_FL << endl;
+	cout << ADJUST_BR << " " << ADJUST_BL << endl;
+	cout << MAX_DIFF << endl;
+	cout << MIN_MOTOR_POWER << " " << MAX_MOTOR_POWER << endl;
+	cout << MIN_SIDE_MOTOR_POWER << " " << MAX_SIDE_MOTOR_POWER << endl;
+	cout << MIN_TURN_MOTOR_POWER << " " << MAX_TURN_MOTOR_POWER << endl;
 }
