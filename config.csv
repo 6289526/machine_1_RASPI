@@ -1,7 +1,17 @@
-CAMERA_AREA_X,55.55,66.66
-CAMERA_AREA_Y,77.77,88.88
+画面内に入るARマーカの座標,最小値(double),最大値(double),,
+CAMERA_AREA_X,55.55,66.66,,
+CAMERA_AREA_Y,77.77,88.88,,
+,,,,
+モータの出力値調整,FR(int),FL(int),BR(int),BL(int)
 ADJUST,-2,4,-2,4
-DISTANCE_DIF,15
-STRAIGHT_POWER,17,19
-SIDE_POWER,30,35
-TURN_POWER,35,45
+,,,,
+ポジショニング許容誤差,(int),,,
+DISTANCE_DIF,15,,,
+,,,,
+縦・横・旋回　の出力値,最小値(int),最大値(int),,
+STRAIGHT_POWER,17,19,,
+SIDE_POWER,30,35,,
+TURN_POWER,35,45,,
+,,,,
+デバッグウィンドウの表示, 0:無   1:有,,,
+DEBUG_WINDOW,0,,,

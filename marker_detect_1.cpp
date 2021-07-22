@@ -18,6 +18,8 @@
 using namespace std;
 using namespace cv;
 
+bool DEBUG_WINDOW = false;
+
 const int MAX_MARKER_NUM = 1; // 一度に読めるマーカーの数
 const double MARKER_SIZE = 100;  //マーカーの縦の長さをmmで指定
 
@@ -394,33 +396,32 @@ int main(int argc, const char* argv[])
 
 		cv::imshow("out(Mirror)", /*mirror_*/image);  
 
-		/*
-		cv::namedWindow("angle", cv::WINDOW_AUTOSIZE);
-		
-		
-		char value_x[100];
-		char value_y[100];
-		char value_z[100];
-		sprintf(value_x, "angle X =%f", ave_angleX);
-		sprintf(value_y, "angle Y =%f", ave_angleY);
-		sprintf(value_z, "angle Z =%f", ave_angleZ);
-		putText(backimage, value_x, Point(50, 100), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
-		putText(backimage, value_y, Point(50, 150), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
-		putText(backimage, value_z, Point(50, 200), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
-		
-		char value2_x[100];
-		char value2_y[100];
-		char value2_z[100];
-		sprintf(value2_x, "distance X =%f cm", distanceX);
-		sprintf(value2_y, "distance Y =%f cm", distanceY);
-		sprintf(value2_z, "distance Z =%f cm", distanceZ);
-		putText(backimage, value2_x, Point(50, 250), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
-		putText(backimage, value2_y, Point(50, 300), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
-		putText(backimage, value2_z, Point(50, 350), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
-		
+		if (DEBUG_WINDOW) {
+			cv::namedWindow("angle", cv::WINDOW_AUTOSIZE);
+			
+			char value_x[100];
+			char value_y[100];
+			char value_z[100];
+			sprintf(value_x, "angle X =%f", ave_angleX);
+			sprintf(value_y, "angle Y =%f", ave_angleY);
+			sprintf(value_z, "angle Z =%f", ave_angleZ);
+			putText(backimage, value_x, Point(50, 100), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+			putText(backimage, value_y, Point(50, 150), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+			putText(backimage, value_z, Point(50, 200), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+			
+			char value2_x[100];
+			char value2_y[100];
+			char value2_z[100];
+			sprintf(value2_x, "distance X =%f cm", distanceX);
+			sprintf(value2_y, "distance Y =%f cm", distanceY);
+			sprintf(value2_z, "distance Z =%f cm", distanceZ);
+			putText(backimage, value2_x, Point(50, 250), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+			putText(backimage, value2_y, Point(50, 300), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+			putText(backimage, value2_z, Point(50, 350), FONT_HERSHEY_SIMPLEX, 1.2, Scalar(100, 200, 100), 2);
+			
 
-		cv::imshow("angle", backimage);
-		*/
+			cv::imshow("angle", backimage);
+		}
 
 		Recive_Data(fd);
 
@@ -969,6 +970,10 @@ void csv_load_init(char filename[]) {
 			MIN_TURN_MOTOR_POWER = std::stoi(str_conma_buf);
 			getline(i_stream, str_conma_buf, '\n');
 			MAX_TURN_MOTOR_POWER = std::stoi(str_conma_buf);
+		}
+		else if (str_conma_buf == "DEBUG_WINDOW") {
+			getline(i_stream, str_conma_buf, '\n');
+			DEBUG_WINDOW = std::stoi(str_conma_buf);
 		}
 	}
 
